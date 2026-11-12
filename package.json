@@ -1,0 +1,19 @@
+{
+  "name": "ha-router-card",
+  "version": "1.0.0",
+  "description": "Lovelace cards for Home Assistant to monitor firewalls, routers and mesh Wi-Fi systems: Firewalla, OPNsense, pfSense, UniFi, TP-Link Deco and Omada, MikroTik, ASUS, NETGEAR, Keenetic, OpenWrt, GL.iNet, Xiaomi, eero, Linksys Velop and Ruckus.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs && node --check dist/router-card.js",
+    "screenshots": "node scripts/screenshots.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "acorn": "^8.19.0",
+    "css-tree": "^3.2.1",
+    "playwright": "^1.64.1"
+  }
+}
