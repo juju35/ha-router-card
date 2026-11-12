@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 - 2026-11-13
+
+### Fixes
+- **eero**: the header shows the eero logo as a badge, missing in 1.0.0.
+
 ## 1.0.0 - 2026-11-12
 
 First release: generic Lovelace cards for firewalls, routers and mesh Wi-Fi systems, asked for Firewalla ([juju35/ha-internet-box-card#105](https://github.com/juju35/ha-internet-box-card/issues/105)) and TP-Link Deco ([juju35/ha-internet-box-card#106](https://github.com/juju35/ha-internet-box-card/issues/106)) by ssilence5.

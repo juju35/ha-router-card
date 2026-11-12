@@ -22,6 +22,7 @@
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/glinet.svg" alt="GL.iNet" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/xiaomi.svg" alt="Xiaomi" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/linksys.svg" alt="Linksys" height="36">&nbsp;&nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/eero.svg" alt="eero" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/ruckus.png" alt="Ruckus" height="36">
 </p>
 
@@ -55,7 +56,7 @@ Entities are **discovered automatically**, you don't have to pick them one by on
 - Light and dark mode, 22 languages (see [Translations](#translations))
 - Unavailable entities (for example while the router restarts) are shown as unavailable, not as offline or Wi-Fi off; the restart button is disabled meanwhile
 - Sections view: the full card needs at least 9 columns, the mini card 6; on a narrow card the picture gets smaller then hidden, and the status pill shows only its coloured dot
-- Single file, no external dependency: the drawings and brand logos are embedded (eero has no logo yet: its header shows the device icon without a badge); only English is in it, the other languages are loaded when needed
+- Single file, no external dependency: the drawings and brand logos are embedded; only English is in it, the other languages are loaded when needed
 
 ## Supported integrations
 
