@@ -175,6 +175,36 @@ test("Linksys Velop and NETGEAR: the integration's own keys win (WAN status, spe
   assert.equal(discover(netgear, undefined, {}).scalars.st_down, "sensor.orbi_rbr860_downlink_bandwidth");
 });
 
+test("OpenWrt (FaserF): WAN interface rates, mwan state, public IP, storage, firmware update", () => {
+  const hass = mock(
+    "openwrt",
+    { r: { name: "OpenWrt", model: "Banana Pi BPI-R4", sw_version: "24.10.4" } },
+    [
+      ["sensor.openwrt_wan_rx_rate", "r", "net_rx_rate", "5400", rate("kB/s")],
+      ["sensor.openwrt_wan_tx_rate", "r", "net_tx_rate", "640", rate("kB/s")],
+      ["sensor.openwrt_lan_rx_rate", "r", "net_rx_rate", "700", rate("kB/s")],
+      ["binary_sensor.openwrt_wan_mwan_online", "r", "mwan_online", "on", { device_class: "connectivity" }],
+      ["sensor.openwrt_public_ip", "r", "public_ip", "192.0.2.10", {}],
+      ["sensor.openwrt_cpu_usage", "r", "cpu_usage", "3", pct],
+      ["sensor.openwrt_memory_usage", "r", "memory_usage", "35", pct],
+      ["sensor.openwrt_storage_usage", "r", "storage_usage", "12", pct],
+      ["sensor.openwrt_connected_clients", "r", "connected_clients", "19", {}],
+      ["button.openwrt_reboot", "r", "reboot", "unknown", { device_class: "restart" }],
+      ["button.openwrt_wan_reconnect", "r", "interface_reconnect", "unknown", { device_class: "restart" }],
+      ["update.openwrt_firmware", "r", "firmware_update", "off", {}],
+    ]
+  );
+  const sc = discover(hass, undefined, {}).scalars;
+  assert.equal(sc.rate_down, "sensor.openwrt_wan_rx_rate");
+  assert.equal(sc.rate_up, "sensor.openwrt_wan_tx_rate");
+  assert.equal(sc.wan, "binary_sensor.openwrt_wan_mwan_online");
+  assert.equal(sc.ip, "sensor.openwrt_public_ip");
+  assert.equal(sc.disk, "sensor.openwrt_storage_usage");
+  assert.equal(sc.clients, "sensor.openwrt_connected_clients");
+  assert.equal(sc.reboot, "button.openwrt_reboot");
+  assert.equal(sc.update, "update.openwrt_firmware");
+});
+
 test("an integration the card does not know: shown from the kind and words of its entities", () => {
   const hass = mock(
     "some_router",

@@ -2448,7 +2448,7 @@ const PROFILES = {
     keys: { wan: "wan_status", ip: "wan_ip", clients: "online_devices", st_down: "download_bandwidth", st_up: "upload_bandwidth", st_ping: "speedtest_latency", node_state: "status" },
   },
   ruckus_unleashed: {
-    name: "Ruckus Unleashed", kind: "ap", color: "#ff8200", logo: "__IMG_FILE:ruckus.svg__",
+    name: "Ruckus Unleashed", kind: "ap", color: "#ff8200", logo: "__IMG_FILE:ruckus.png__",
     website: "https://www.ruckusnetworks.com", admin: null,
   },
 };
@@ -2750,7 +2750,7 @@ const classify = (hass, profile, e, own) => {
   const w = words(e);
   const unit = String(a.unit_of_measurement || "");
   const dc = a.device_class;
-  const bonus = (own ? 1 : -1) + (has(w, "wan", "internet", "isp") ? 4 : 0) - (has(w, ...NOT_WAN) ? 3 : 0);
+  const bonus = (own ? 1 : -1) + (has(w, "wan", "mwan", "internet", "isp") ? 4 : 0) - (has(w, ...NOT_WAN) ? 3 : 0);
   if (domain === "sensor") {
     if (dc === "data_rate" || isRateUnit(unit)) {
       const dir = direction(w);
@@ -2785,7 +2785,7 @@ const classify = (hass, profile, e, own) => {
       if (has(w, "ipv6")) return { slot: "ip6", score: 3 };
       return IPV4.test(String(s?.state || "")) || noValue(s) ? { slot: "ip", score: 3 + (has(w, "public", "external") ? 1 : 0) } : null;
     }
-    if (has(w, "status", "state") && has(w, "wan", "internet", "gateway")) return { slot: "wan", score: 3 + bonus };
+    if (has(w, "status", "state") && has(w, "wan", "mwan", "internet", "gateway")) return { slot: "wan", score: 3 + bonus };
     if ((has(w, "clients", "devices", "hosts") || has(w, "client", "count")) && !unit.trim()) {
       if (has(w, "offline", "blocked", "reservations", "reserved", "dhcp", "captive", "vpn", "openvpn", "pptpvpn", "iot")) return null;
       if (has(w, "guest")) return { slot: "guest", score: 2 };
@@ -2799,7 +2799,7 @@ const classify = (hass, profile, e, own) => {
     if (own && (dc === "update" || has(w, "update", "available"))) return has(w, "update") ? { slot: "update", score: 1 } : null;
     if (dc !== "connectivity") return null;
     // The WAN link, on the router or on its WAN interface's device (MikroTik).
-    if (has(w, "wan", "internet", "gateway", "isp"))
+    if (has(w, "wan", "mwan", "internet", "gateway", "isp"))
       return has(w, ...NOT_WAN) ? null : { slot: "wan", score: 6 + (own ? 0 : -1) + (has(w, "secondary", "backup", "failover") ? -2 : 0) };
     return null;
   }
