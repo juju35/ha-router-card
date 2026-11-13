@@ -2,7 +2,7 @@
 // ("__IMG_FILE:<file>__", SVG or PNG) from images/<file> when that file is there, else leaving them out (empty: the header then
 // shows the device icon without a logo badge), so the card needs no extra resource.
 // Usage: node scripts/build.mjs  (dist/ is not committed: CI and the release workflow build it)
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { splitDist } from "./i18n-split.mjs";
 
@@ -21,4 +21,4 @@ console.log(`Built dist/router-card.js (${(out.length / 1024).toFixed(1)} KB)`);
 
 // Translations: English stays in the bundle, each other language goes to dist/router-card.i18n.<lang>.js, fetched
 // when a card needs it (scripts/i18n-split.mjs).
-if (process.argv[1] === fileURLToPath(import.meta.url)) splitDist(`${root}dist`, "router-card.js", { version: pkg.version });
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) splitDist(`${root}dist`, "router-card.js", { version: pkg.version });
