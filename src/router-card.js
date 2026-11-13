@@ -2658,6 +2658,42 @@ const CONFIRM_GUARD_MS = 400;
 // A click inside a dialog (more-info opened from the card, say) is not a click outside the card.
 const inDialog = (path) => path.some((n) => ["ha-more-info-dialog", "ha-dialog", "dialog"].includes(n.localName));
 
+// "A click elsewhere" is caught on the pointer, not only on the click event: on iOS (Safari and the companion app)
+// a tap on something that is not clickable (the background, an empty spot, a card with no action) sends no click to
+// the page. The handler runs when the press and the release are both outside the card (a slider dragged out of the
+// card does not count), and a scroll does not count (the browser cancels the pointer); keyboard clicks still go
+// through the click event. The handler keeps its own checks (outside of the card, not in a dialog).
+const watchOutside = (card, handler) => {
+  let downOutside = false;
+  const onDown = (ev) => {
+    downOutside = !ev.composedPath().includes(card);
+  };
+  const onUp = (ev) => {
+    if (downOutside) handler(ev);
+    downOutside = false;
+  };
+  const onClick = (ev) => {
+    if (ev.detail === 0) handler(ev);
+  };
+  return {
+    on() {
+      document.addEventListener("pointerdown", onDown, true);
+      document.addEventListener("pointerup", onUp, true);
+      document.addEventListener("click", onClick, true);
+    },
+    off() {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("pointerup", onUp, true);
+      document.removeEventListener("click", onClick, true);
+    },
+    // A tap (press and release at the same spot), for the tests.
+    tap(ev) {
+      onDown(ev);
+      onUp(ev);
+    },
+  };
+};
+
 const fireMoreInfo = (node, entityId) => {
   if (!entityId) return;
   node.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
@@ -3301,14 +3337,18 @@ class RouterBase extends HTMLElement {
         this._closeDialog(false);
       }
     };
-    document.addEventListener("click", this._onDialogOutside, true);
-    // Reattached with the popup still open (view switch, editor): Escape keeps closing it.
-    if (this._dialog) window.addEventListener("keydown", this._onKey);
+    this._dialogOutside ??= watchOutside(this, (ev) => this._onDialogOutside(ev));
+    this._dialogOutside.on();
+    // Back on the page after leaving it: rendered again in its default state.
+    this._update();
   }
 
   disconnectedCallback() {
-    document.removeEventListener("click", this._onDialogOutside, true);
+    this._dialogOutside?.off();
     window.removeEventListener("keydown", this._onKey);
+    // Left (another dashboard view, a conditional card hidden): back to the defaults, so that the card does not come
+    // back with its popup open.
+    this._dialog = null;
   }
 
   // Calls a Home Assistant service on an entity. A failed call is logged (Home Assistant already shows a toast).
@@ -3973,13 +4013,17 @@ class RouterMiniCard extends RouterCard {
   }
 
   connectedCallback() {
+    // Listens after the full card's popup listener, which marks the event that closed the popup.
+    this._unzoom ??= watchOutside(this, this._onOutside);
     super.connectedCallback?.();
-    document.addEventListener("click", this._onOutside, true);
+    this._unzoom.on();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback?.();
-    document.removeEventListener("click", this._onOutside, true);
+    this._unzoom?.off();
+    // Back to the compact view once off the screen.
+    this._zoomed = false;
   }
 
   getCardSize() {
