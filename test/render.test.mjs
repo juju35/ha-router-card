@@ -43,6 +43,11 @@ const open = async (type, mock, { width = 460, language = "en", config = {} } = 
       document.getElementById("root").appendChild(el);
       window.card = el;
       window.click = (node) => node.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
+      // A tap: press and release (on iOS a tap on something not clickable sends no click at all).
+      window.tap = (down, up = down) => {
+        down.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+        up.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, composed: true }));
+      };
     },
     { type, config, language, ...mock }
   );
@@ -79,22 +84,61 @@ for (const [name, mock] of Object.entries(integrations)) {
   }
 }
 
-test("the detail button shows the full card and goes back to the mini card; a click outside folds it", async (t) => {
+test("the detail button shows the full card and goes back to the mini card; a tap outside folds it", async (t) => {
   if (skip) return t.skip(skip);
   const { page, errors } = await open("router-mini-card", integrations.unifi);
   const res = await page.evaluate(() => {
     const view = () => ({ full: !!window.card.shadowRoot.querySelector(".section-title"), size: window.card.getCardSize() });
+    const outside = document.getElementById("outside");
     const before = view();
     window.click(window.card.shadowRoot.querySelector(".zoom"));
     const zoomed = view();
     const sections = [...window.card.shadowRoot.querySelectorAll(".section-title")].map((n) => n.textContent);
-    window.click(document.getElementById("outside"));
-    return { before, zoomed, sections, after: view() };
+    // Pressed in the card and released outside of it (a slider dragged out): nothing folds.
+    window.tap(window.card, outside);
+    const dragged = view();
+    // A tap elsewhere with no click (iOS): the pointer alone folds it.
+    window.tap(outside);
+    const tapped = view();
+    // Left zoomed and back on the page: compact.
+    window.click(window.card.shadowRoot.querySelector(".zoom"));
+    const root = document.getElementById("root");
+    root.removeChild(window.card);
+    root.appendChild(window.card);
+    return { before, zoomed, sections, dragged, tapped, back: view() };
   });
   assert.deepEqual(res.before, { full: false, size: 3 });
   assert.deepEqual(res.zoomed, { full: true, size: 7 });
   assert.deepEqual(res.sections, ["Network", "System", "Network devices", "Local network"]);
-  assert.deepEqual(res.after, { full: false, size: 3 });
+  assert.deepEqual(res.dragged, { full: true, size: 7 });
+  assert.deepEqual(res.tapped, { full: false, size: 3 });
+  assert.deepEqual(res.back, { full: false, size: 3 });
+  assert.deepEqual(errors, []);
+  await page.close();
+});
+
+test("no rewrite under a press: drawn by the click, or once released", async (t) => {
+  if (skip) return t.skip(skip);
+  const { page, errors } = await open("router-card", integrations.unifi);
+  const res = await page.evaluate(async () => {
+    const card = window.card;
+    const title = () => !!card.shadowRoot.querySelector(".section-title");
+    const press = (node) => node.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+    const release = (node) => node.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, composed: true }));
+    const before = card.shadowRoot.innerHTML;
+    const node = card.shadowRoot.querySelector(".section-title");
+    press(node);
+    // An update arrives while the pointer is down: held.
+    card.setConfig({ type: "custom:router-card", title: "Held under the pointer", show_network: false });
+    const held = card.shadowRoot.innerHTML === before;
+    // Released with its click: drawn.
+    release(node);
+    window.click(node);
+    await new Promise((r) => setTimeout(r, 20));
+    const drawn = card.shadowRoot.innerHTML !== before;
+    return { had: title() || before.length > 0, held, drawn, pressing: card._pressing };
+  });
+  assert.deepEqual(res, { had: true, held: true, drawn: true, pressing: false });
   assert.deepEqual(errors, []);
   await page.close();
 });
