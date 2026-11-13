@@ -3277,7 +3277,28 @@ class RouterBase extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._html = "";
     this._dialog = null;
+    // No rewrite of the card between the press and the release: Home Assistant updates the card several times a
+    // second, and a rewrite under the pointer can replace the element pressed, so that the click lands on the card
+    // itself and does nothing. The pending render is done once released (after the click).
+    this._onPressStart = () => {
+      this._pressing = true;
+      window.addEventListener("pointerup", this._onPressEnd, true);
+      window.addEventListener("pointercancel", this._onPressEnd, true);
+    };
+    this._onPressEnd = () => {
+      window.removeEventListener("pointerup", this._onPressEnd, true);
+      window.removeEventListener("pointercancel", this._onPressEnd, true);
+      setTimeout(() => {
+        this._pressing = false;
+        if (!this._dirty) return;
+        this._dirty = false;
+        this._update();
+      }, 0);
+    };
+    this.shadowRoot.addEventListener("pointerdown", this._onPressStart);
     this.shadowRoot.addEventListener("click", (ev) => {
+      // The click ends the press: what it changes is drawn at once.
+      this._pressing = false;
       // Just closed: the rest of a double click on the popup's button does nothing.
       if (!this._dialog && Date.now() - (this._dialogClosedAt ?? 0) < CONFIRM_GUARD_MS) {
         ev.stopImmediatePropagation();
@@ -3346,6 +3367,9 @@ class RouterBase extends HTMLElement {
   disconnectedCallback() {
     this._dialogOutside?.off();
     window.removeEventListener("keydown", this._onKey);
+    this._pressing = false;
+    window.removeEventListener("pointerup", this._onPressEnd, true);
+    window.removeEventListener("pointercancel", this._onPressEnd, true);
     // Left (another dashboard view, a conditional card hidden): back to the defaults, so that the card does not come
     // back with its popup open.
     this._dialog = null;
@@ -3591,6 +3615,11 @@ class RouterBase extends HTMLElement {
 
   _update(sig) {
     if (!this._hass || !this._config) return;
+    // A press in progress: drawn once released (see _onPressStart).
+    if (this._pressing) {
+      this._dirty = true;
+      return;
+    }
     this._sig = sig ?? this._signature();
     let html = this._render();
     // The confirmation popup lives inside the ha-card (positioned over it), added after the content.

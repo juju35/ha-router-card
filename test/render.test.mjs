@@ -117,6 +117,32 @@ test("the detail button shows the full card and goes back to the mini card; a ta
   await page.close();
 });
 
+test("no rewrite under a press: drawn by the click, or once released", async (t) => {
+  if (skip) return t.skip(skip);
+  const { page, errors } = await open("router-card", integrations.unifi);
+  const res = await page.evaluate(async () => {
+    const card = window.card;
+    const title = () => !!card.shadowRoot.querySelector(".section-title");
+    const press = (node) => node.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+    const release = (node) => node.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, composed: true }));
+    const before = card.shadowRoot.innerHTML;
+    const node = card.shadowRoot.querySelector(".section-title");
+    press(node);
+    // An update arrives while the pointer is down: held.
+    card.setConfig({ type: "custom:router-card", title: "Held under the pointer", show_network: false });
+    const held = card.shadowRoot.innerHTML === before;
+    // Released with its click: drawn.
+    release(node);
+    window.click(node);
+    await new Promise((r) => setTimeout(r, 20));
+    const drawn = card.shadowRoot.innerHTML !== before;
+    return { had: title() || before.length > 0, held, drawn, pressing: card._pressing };
+  });
+  assert.deepEqual(res, { had: true, held: true, drawn: true, pressing: false });
+  assert.deepEqual(errors, []);
+  await page.close();
+});
+
 test("a Wi-Fi network goes off and the router restarts only once confirmed; Wi-Fi goes on at once", async (t) => {
   if (skip) return t.skip(skip);
   const { page, errors } = await open("router-card", integrations.unifi);
