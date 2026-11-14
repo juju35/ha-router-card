@@ -258,3 +258,54 @@ test("the render signature compares states by identity", () => {
   assert.ok(!sameSig([a, 1], [{}, 1]));
   assert.ok(!sameSig(undefined, [a]));
 });
+
+test("Cudy (ha-cudy-router): English names without translation keys; total rates, not the top downloader; mesh units are not clients (#9)", () => {
+  const hass = mock(
+    "cudy_router",
+    {
+      wr: { name: "WR3000", model: "WR3000", sw_version: "2.4.19 BZ", url: "http://192.168.10.1" },
+      m1: { name: "Mesh Bedroom", model: "WR1300", via: "wr" },
+    },
+    [
+      ["sensor.wr3000_total_download_speed", "wr", null, "84.2", rate("Mbit/s")],
+      ["sensor.wr3000_total_upload_speed", "wr", null, "9.1", rate("Mbit/s")],
+      ["sensor.wr3000_top_downloader_speed", "wr", null, "61.5", rate("Mbit/s")],
+      ["sensor.wr3000_top_uploader_speed", "wr", null, "4.2", rate("Mbit/s")],
+      ["sensor.wr3000_session_download", "wr", null, "1843", { unit_of_measurement: "MB", device_class: "data_size" }],
+      ["sensor.wr3000_cpu_usage", "wr", null, "1.67", pct],
+      ["sensor.wr3000_ram_usage", "wr", null, "60.74", pct],
+      ["sensor.wr3000_uptime", "wr", null, "864000", { unit_of_measurement: "s", device_class: "duration" }],
+      ["sensor.wr3000_public_ip", "wr", null, "203.0.113.7", {}],
+      ["sensor.wr3000_wan_ip", "wr", null, "100.64.12.3", {}],
+      ["sensor.wr3000_mesh_devices_connected", "wr", null, "1", {}],
+      ["sensor.wr3000_device_count", "wr", null, "22", {}],
+      ["sensor.wr3000_total_clients", "wr", null, "22", {}],
+      ["sensor.wr3000_wired_clients", "wr", null, "6", {}],
+      ["sensor.wr3000_wifi_2_4g_clients", "wr", null, "13", {}],
+      ["switch.wr3000_wifi_2_4g_enabled", "wr", null, "on", {}],
+      ["switch.wr3000_wifi_5g_enabled", "wr", null, "on", {}],
+      ["switch.wr3000_wifi_2_4g_hidden_network", "wr", null, "off", {}],
+      ["switch.wr3000_wifi_5g_separate_clients", "wr", null, "off", {}],
+      ["switch.wr3000_led", "wr", null, "on", {}],
+      ["switch.wr3000_vpn_enabled", "wr", null, "on", {}],
+      ["button.wr3000_reboot", "wr", null, "unknown", {}],
+      ["sensor.mesh_bedroom_status", "m1", null, "online", {}],
+      ["sensor.mesh_bedroom_connected_devices", "m1", null, "3", {}],
+    ]
+  );
+  assert.equal(listDevices(hass)[0].value, "wr");
+  const box = discover(hass, undefined, {});
+  assert.equal(box.profile.name, "Cudy");
+  const sc = box.scalars;
+  assert.equal(sc.rate_down, "sensor.wr3000_total_download_speed");
+  assert.equal(sc.rate_up, "sensor.wr3000_total_upload_speed");
+  assert.equal(sc.cpu, "sensor.wr3000_cpu_usage");
+  assert.equal(sc.ram, "sensor.wr3000_ram_usage");
+  assert.equal(sc.boot, "sensor.wr3000_uptime");
+  assert.equal(sc.ip, "sensor.wr3000_public_ip");
+  assert.equal(sc.clients, "sensor.wr3000_total_clients");
+  assert.equal(sc.wired, "sensor.wr3000_wired_clients");
+  assert.equal(sc.reboot, "button.wr3000_reboot");
+  assert.deepEqual(plain(box.wifi.map((w) => w.id)).sort(), ["switch.wr3000_wifi_2_4g_enabled", "switch.wr3000_wifi_5g_enabled"]);
+  assert.deepEqual(plain(box.nodes.map((n) => n.name)), ["Mesh Bedroom"]);
+});

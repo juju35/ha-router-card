@@ -23,6 +23,7 @@
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/openwrt.svg" alt="OpenWrt" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/glinet.svg" alt="GL.iNet" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/xiaomi.svg" alt="Xiaomi" height="36">&nbsp;&nbsp;&nbsp;
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/cudy-white.png"><img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/cudy.png" alt="Cudy" height="28"></picture>&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/linksys.svg" alt="Linksys" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/eero.svg" alt="eero" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/ruckus.png" alt="Ruckus" height="36">
@@ -85,6 +86,7 @@ Each section shows only what the integration exposes. Built-in integrations ship
 | [Keenetic NDMS2](https://www.home-assistant.io/integrations/keenetic_ndms2/) (`keenetic_ndms2`, built in) | Connection state, trackers |
 | [OpenWrt](https://github.com/kvj/hass_openwrt) (`openwrt`, custom), [OpenWrt (FaserF)](https://github.com/FaserF/ha-openwrt) (`openwrt`, custom), [OpenWrt ubus](https://github.com/FUjr/homeassistant-openwrt-ubus) (`openwrt_ubus`, custom) and [LuCI](https://www.home-assistant.io/integrations/luci/) (`luci`, built in, trackers only) | WAN rates, CPU, memory, load, uptime, wireless clients, mesh peers, Wi-Fi switches, as each integration exposes them |
 | [GL.iNet](https://github.com/HarvsG/ha-glinet4-integration) (`glinet`, custom) and [GL.iNet Router](https://github.com/vithurshanselvarajah/ha-glinet-router) (`glinet_router`, custom) | WAN status, CPU temperature, load, memory, flash, uptime, clients, restart |
+| [Cudy Router](https://github.com/usersaynoso/ha-cudy-router) (`cudy_router`, custom) | Total download / upload speed, CPU, RAM, uptime, public IP, total / wired / Wi-Fi / guest clients, the 2.4 / 5 GHz Wi-Fi switches, restart, mesh units with their state and clients |
 | [Xiaomi Mi Wi-Fi](https://github.com/dmamontov/hass-miwifi) (`miwifi`, custom) | WAN download / upload speed, memory, temperature, uptime, devices, Wi-Fi switches |
 
 ### Mesh Wi-Fi and access points
@@ -346,7 +348,7 @@ Contributions for additional languages are welcome!
 
 [MIT](https://github.com/juju35/ha-router-card/blob/main/LICENSE)
 
-The brand names and logos belong to their owners (logos from [Simple Icons](https://simpleicons.org), CC0, and the Home Assistant [brands](https://github.com/home-assistant/brands) repository for Ruckus). This project is not affiliated with any of them.
+The brand names and logos belong to their owners (logos from [Simple Icons](https://simpleicons.org), CC0, the Home Assistant [brands](https://github.com/home-assistant/brands) repository for Ruckus, Cudy's own wordmark for Cudy). This project is not affiliated with any of them.
 
 ## Support
 
