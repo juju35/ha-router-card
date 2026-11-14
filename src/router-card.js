@@ -2438,6 +2438,12 @@ const PROFILES = {
     name: "Xiaomi", kind: "router", color: "#ff6900", logo: "__IMG_FILE:xiaomi.svg__",
     website: "https://www.mi.com", admin: "http://miwifi.com",
   },
+  // Cudy (ha-cudy-router, custom): English names without translation keys, found from their words; no logo of its own
+  // (the integration's is GPL-licensed and the brand is in no icon set the card uses).
+  cudy_router: {
+    name: "Cudy", kind: "router", color: "#0097d6", logo: "",
+    website: "https://www.cudy.com", admin: "http://192.168.10.1",
+  },
   eero: {
     name: "eero", kind: "mesh", color: "#0072ff", logo: "__IMG_FILE:eero.svg__",
     website: "https://eero.com", admin: null,
@@ -2823,7 +2829,8 @@ const classify = (hass, profile, e, own) => {
     }
     if (has(w, "status", "state") && has(w, "wan", "mwan", "internet", "gateway")) return { slot: "wan", score: 3 + bonus };
     if ((has(w, "clients", "devices", "hosts") || has(w, "client", "count")) && !unit.trim()) {
-      if (has(w, "offline", "blocked", "reservations", "reserved", "dhcp", "captive", "vpn", "openvpn", "pptpvpn", "iot")) return null;
+      // A count of mesh units (Cudy "Mesh devices connected") is not one of clients.
+      if (has(w, "offline", "blocked", "reservations", "reserved", "dhcp", "captive", "vpn", "openvpn", "pptpvpn", "iot", "mesh")) return null;
       if (has(w, "guest")) return { slot: "guest", score: 2 };
       if (has(w, "wired")) return { slot: "wired", score: 2 };
       if (has(w, "wireless", "wifi", "wlan")) return { slot: "wireless", score: 2 };
@@ -2846,7 +2853,8 @@ const classify = (hass, profile, e, own) => {
     return null;
   }
   if (domain === "switch") {
-    if (has(w, "polling", "led", "parental", "block", "vpn", "qos", "port", "poe", "access", "smart", "traffic", "homekit", "wps", "rule", "forwarding", "schedule", "service", "upnp")) return null;
+    // The settings of a Wi-Fi network (Cudy "hidden network", "separate clients") are not the network itself.
+    if (has(w, "polling", "led", "parental", "block", "vpn", "qos", "port", "poe", "access", "smart", "traffic", "homekit", "wps", "rule", "forwarding", "schedule", "service", "upnp", "hidden", "separate", "isolate", "isolation")) return null;
     if (has(w, "wifi", "wi", "wlan", "ssid", "wireless", "radio", "guest") || /wifi/.test(w)) return { slot: "wifi", score: 1 };
     return null;
   }
