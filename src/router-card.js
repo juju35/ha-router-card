@@ -2438,10 +2438,9 @@ const PROFILES = {
     name: "Xiaomi", kind: "router", color: "#ff6900", logo: "__IMG_FILE:xiaomi.svg__",
     website: "https://www.mi.com", admin: "http://miwifi.com",
   },
-  // Cudy (ha-cudy-router, custom): English names without translation keys, found from their words; no logo of its own
-  // (the integration's is GPL-licensed and the brand is in no icon set the card uses).
+  // Cudy (ha-cudy-router, custom): English names without translation keys, found from their words.
   cudy_router: {
-    name: "Cudy", kind: "router", color: "#0097d6", logo: "",
+    name: "Cudy", kind: "router", color: "#0097d6", logo: "__IMG_FILE:cudy.png__",
     website: "https://www.cudy.com", admin: "http://192.168.10.1",
   },
   eero: {

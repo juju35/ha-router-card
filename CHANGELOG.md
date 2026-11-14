@@ -3,7 +3,7 @@
 ## 1.1.0 - 2026-11-14
 
 ### Features
-- **Cudy** ([#9](https://github.com/juju35/ha-router-card/issues/9), requested by @scmsohel): the [Cudy Router](https://github.com/usersaynoso/ha-cudy-router) integration (`cudy_router`, custom) is supported — WR3000, WR1300 and the other Cudy routers it reads. Its entities have English names and no translation keys: the total download / upload speed (not the top downloader's), CPU, RAM, uptime, public IP, clients, the 2.4 / 5 GHz Wi-Fi switches, restart and the mesh units are found from their words.
+- **Cudy** ([#9](https://github.com/juju35/ha-router-card/issues/9), requested by @scmsohel): the [Cudy Router](https://github.com/usersaynoso/ha-cudy-router) integration (`cudy_router`, custom) is supported, with its logo — WR3000, WR1300 and the other Cudy routers it reads. Its entities have English names and no translation keys: the total download / upload speed (not the top downloader's), CPU, RAM, uptime, public IP, clients, the 2.4 / 5 GHz Wi-Fi switches, restart and the mesh units are found from their words.
 
 ### Fixes
 - A count of mesh units ("Mesh devices connected") is no longer taken for the connected clients, and the settings switches of a Wi-Fi network (hidden network, separate / isolated clients) are no longer listed as Wi-Fi networks.

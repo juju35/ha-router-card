@@ -23,6 +23,7 @@
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/openwrt.svg" alt="OpenWrt" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/glinet.svg" alt="GL.iNet" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/xiaomi.svg" alt="Xiaomi" height="36">&nbsp;&nbsp;&nbsp;
+  <picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/cudy-white.png"><img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/cudy.png" alt="Cudy" height="28"></picture>&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/linksys.svg" alt="Linksys" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/eero.svg" alt="eero" height="36">&nbsp;&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/images/ruckus.png" alt="Ruckus" height="36">
@@ -347,7 +348,7 @@ Contributions for additional languages are welcome!
 
 [MIT](https://github.com/juju35/ha-router-card/blob/main/LICENSE)
 
-The brand names and logos belong to their owners (logos from [Simple Icons](https://simpleicons.org), CC0, and the Home Assistant [brands](https://github.com/home-assistant/brands) repository for Ruckus). This project is not affiliated with any of them.
+The brand names and logos belong to their owners (logos from [Simple Icons](https://simpleicons.org), CC0, the Home Assistant [brands](https://github.com/home-assistant/brands) repository for Ruckus, Cudy's own wordmark for Cudy). This project is not affiliated with any of them.
 
 ## Support
 
