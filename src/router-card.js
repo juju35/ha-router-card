@@ -3398,7 +3398,9 @@ const BASE_STYLE = `
   .tile { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; min-width: 0;
           background: var(--secondary-background-color, rgba(127,127,127,.08)); position: relative; overflow: hidden; }
   .tile > :not(.spark) { position: relative; }
-  .tile .spark { position: absolute; left: 0; bottom: 0; width: 100%; height: 55%; pointer-events: none; }
+  /* 24 h curve in its own 24 px band under the icon and the text, never behind them. */
+  .tile:has(> .spark) { padding-bottom: 30px; }
+  .tile .spark { position: absolute; inset: auto 0 0; width: 100%; height: 24px; pointer-events: none; }
   .spark-a { fill: color-mix(in srgb, var(--c) 12%, transparent); }
   .spark-l { fill: none; stroke: color-mix(in srgb, var(--c) 50%, transparent); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
   .tile .icon { color: color-mix(in srgb, var(--c, var(--rc-brand)) 60%, var(--primary-text-color)); }
@@ -4084,8 +4086,9 @@ const FULL_STYLE = `
   .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
   .gauge { display: flex; flex-direction: column; align-items: center; position: relative; padding: 4px 0 2px; border-radius: 10px; overflow: hidden; }
   .gauge > :not(.spark) { position: relative; }
-  /* The 24 h curve of a percentage, on a 0-100 scale, behind its ring. */
-  .gauge .spark { position: absolute; left: 0; bottom: 0; width: 100%; height: 50%; pointer-events: none; }
+  /* The 24 h curve of a percentage, on a 0-100 scale, in its own 24 px band under the ring and the label. */
+  .gauge:has(> .spark) { padding-bottom: 28px; }
+  .gauge .spark { position: absolute; inset: auto 0 0; width: 100%; height: 24px; pointer-events: none; }
   .ring { width: 52px; height: 52px; transform: rotate(-90deg); }
   .ring circle { fill: none; stroke-width: 6; }
   .ring .track { stroke: var(--divider-color, rgba(127,127,127,.25)); }
