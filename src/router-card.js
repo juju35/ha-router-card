@@ -193,13 +193,13 @@ const rcSceneSvg = ({ uid, state, kind, pic, href, label }) => {
   </svg>`;
 };
 
-// Night picture: forced by illustration_theme, else the sun below the horizon or Home Assistant's dark mode (a dark
-// theme takes the night picture even while the sun is up; an unknown sun leaves the dark mode alone to decide).
+// Night picture: forced by illustration_theme, else Home Assistant's dark mode alone (a light theme keeps the day
+// picture after sunset).
 const rcIsNight = (hass, config) => {
   const theme = config?.illustration_theme;
   if (theme === "night") return true;
   if (theme === "day") return false;
-  return hass?.states?.["sun.sun"]?.state === "below_horizon" || !!hass?.themes?.darkMode;
+  return !!hass?.themes?.darkMode;
 };
 
 const ICONS = {
@@ -312,7 +312,7 @@ const STRINGS = {
     show_logo: "Show the brand logo",
     illustration: "Illustrated header",
     illustration_theme: "Illustration theme",
-    theme_auto: "Automatic (sun or dark theme)",
+    theme_auto: "Automatic (follows the theme)",
     theme_day: "Day",
     theme_night: "Night",
     show_network: "Show network",
@@ -415,7 +415,7 @@ const STRINGS = {
     show_logo: "Afficher le logo de la marque",
     illustration: "En-tête illustré",
     illustration_theme: "Thème de l'illustration",
-    theme_auto: "Automatique (soleil ou thème sombre)",
+    theme_auto: "Automatique (suit le thème)",
     theme_day: "Jour",
     theme_night: "Nuit",
     show_network: "Afficher le réseau",
@@ -518,7 +518,7 @@ const STRINGS = {
     show_logo: "Markenlogo anzeigen",
     illustration: "Illustrierter Kopfbereich",
     illustration_theme: "Thema der Illustration",
-    theme_auto: "Automatisch (Sonne oder dunkles Design)",
+    theme_auto: "Automatisch (folgt dem Design)",
     theme_day: "Tag",
     theme_night: "Nacht",
     show_network: "Netzwerk anzeigen",
@@ -621,7 +621,7 @@ const STRINGS = {
     show_logo: "Mostrar el logotipo de la marca",
     illustration: "Encabezado ilustrado",
     illustration_theme: "Tema de la ilustración",
-    theme_auto: "Automático (sol o tema oscuro)",
+    theme_auto: "Automático (sigue el tema)",
     theme_day: "Día",
     theme_night: "Noche",
     show_network: "Mostrar la red",
@@ -723,7 +723,7 @@ const STRINGS = {
     show_logo: "Mostra il logo del marchio",
     illustration: "Intestazione illustrata",
     illustration_theme: "Tema dell'illustrazione",
-    theme_auto: "Automatico (sole o tema scuro)",
+    theme_auto: "Automatico (segue il tema)",
     theme_day: "Giorno",
     theme_night: "Notte",
     show_network: "Mostra la rete",
@@ -826,7 +826,7 @@ const STRINGS = {
     show_logo: "Merklogo tonen",
     illustration: "Geïllustreerde koptekst",
     illustration_theme: "Thema van de illustratie",
-    theme_auto: "Automatisch (zon of donker thema)",
+    theme_auto: "Automatisch (volgt het thema)",
     theme_day: "Dag",
     theme_night: "Nacht",
     show_network: "Netwerk tonen",
@@ -929,7 +929,7 @@ const STRINGS = {
     show_logo: "Mostrar o logótipo da marca",
     illustration: "Cabeçalho ilustrado",
     illustration_theme: "Tema da ilustração",
-    theme_auto: "Automático (sol ou tema escuro)",
+    theme_auto: "Automático (segue o tema)",
     theme_day: "Dia",
     theme_night: "Noite",
     show_network: "Mostrar a rede",
@@ -1034,7 +1034,7 @@ const STRINGS = {
     show_logo: "Pokaż logo marki",
     illustration: "Ilustrowany nagłówek",
     illustration_theme: "Motyw ilustracji",
-    theme_auto: "Automatycznie (słońce lub ciemny motyw)",
+    theme_auto: "Automatycznie (według motywu)",
     theme_day: "Dzień",
     theme_night: "Noc",
     show_network: "Pokaż sieć",
@@ -1138,7 +1138,7 @@ const STRINGS = {
     show_logo: "Прикажи лого бренда",
     illustration: "Илустровано заглавље",
     illustration_theme: "Тема илустрације",
-    theme_auto: "Аутоматски (сунце или тамна тема)",
+    theme_auto: "Аутоматски (прати тему)",
     theme_day: "Дан",
     theme_night: "Ноћ",
     show_network: "Прикажи мрежу",
@@ -1242,7 +1242,7 @@ const STRINGS = {
     show_logo: "Prikaži logo brenda",
     illustration: "Ilustrovano zaglavlje",
     illustration_theme: "Tema ilustracije",
-    theme_auto: "Automatski (sunce ili tamna tema)",
+    theme_auto: "Automatski (prati temu)",
     theme_day: "Dan",
     theme_night: "Noć",
     show_network: "Prikaži mrežu",
@@ -1346,7 +1346,7 @@ const STRINGS = {
     show_logo: "Afișează sigla mărcii",
     illustration: "Antet ilustrat",
     illustration_theme: "Tema ilustrației",
-    theme_auto: "Automat (soare sau temă întunecată)",
+    theme_auto: "Automat (urmează tema)",
     theme_day: "Zi",
     theme_night: "Noapte",
     show_network: "Afișează rețeaua",
@@ -1449,7 +1449,7 @@ const STRINGS = {
     show_logo: "Vis mærkets logo",
     illustration: "Illustreret overskrift",
     illustration_theme: "Illustrationens tema",
-    theme_auto: "Automatisk (sol eller mørkt tema)",
+    theme_auto: "Automatisk (følger temaet)",
     theme_day: "Dag",
     theme_night: "Nat",
     show_network: "Vis netværk",
@@ -1552,7 +1552,7 @@ const STRINGS = {
     show_logo: "Visa märkets logotyp",
     illustration: "Illustrerad rubrik",
     illustration_theme: "Illustrationens tema",
-    theme_auto: "Automatiskt (sol eller mörkt tema)",
+    theme_auto: "Automatiskt (följer temat)",
     theme_day: "Dag",
     theme_night: "Natt",
     show_network: "Visa nätverk",
@@ -1655,7 +1655,7 @@ const STRINGS = {
     show_logo: "Покажи логото на марката",
     illustration: "Илюстрирана заглавна част",
     illustration_theme: "Тема на илюстрацията",
-    theme_auto: "Автоматично (слънце или тъмна тема)",
+    theme_auto: "Автоматично (следва темата)",
     theme_day: "Ден",
     theme_night: "Нощ",
     show_network: "Покажи мрежата",
@@ -1760,7 +1760,7 @@ const STRINGS = {
     show_logo: "Показывать логотип марки",
     illustration: "Иллюстрированный заголовок",
     illustration_theme: "Тема иллюстрации",
-    theme_auto: "Автоматически (солнце или тёмная тема)",
+    theme_auto: "Автоматически (следует теме)",
     theme_day: "День",
     theme_night: "Ночь",
     show_network: "Показывать сеть",
@@ -1865,7 +1865,7 @@ const STRINGS = {
     show_logo: "Показувати логотип марки",
     illustration: "Ілюстрований заголовок",
     illustration_theme: "Тема ілюстрації",
-    theme_auto: "Автоматично (сонце або темна тема)",
+    theme_auto: "Автоматично (за темою)",
     theme_day: "День",
     theme_night: "Ніч",
     show_network: "Показувати мережу",
@@ -1967,7 +1967,7 @@ const STRINGS = {
     show_logo: "Márkalogó megjelenítése",
     illustration: "Illusztrált fejléc",
     illustration_theme: "Az illusztráció témája",
-    theme_auto: "Automatikus (nap vagy sötét téma)",
+    theme_auto: "Automatikus (a témát követi)",
     theme_day: "Nappal",
     theme_night: "Éjszaka",
     show_network: "Hálózat megjelenítése",
@@ -2072,7 +2072,7 @@ const STRINGS = {
     show_logo: "Zobraziť logo značky",
     illustration: "Ilustrovaná hlavička",
     illustration_theme: "Téma ilustrácie",
-    theme_auto: "Automaticky (slnko alebo tmavá téma)",
+    theme_auto: "Automaticky (podľa témy)",
     theme_day: "Deň",
     theme_night: "Noc",
     show_network: "Zobraziť sieť",
@@ -2177,7 +2177,7 @@ const STRINGS = {
     show_logo: "Zobrazit logo značky",
     illustration: "Ilustrovaná hlavička",
     illustration_theme: "Motiv ilustrace",
-    theme_auto: "Automaticky (slunce nebo tmavý motiv)",
+    theme_auto: "Automaticky (podle motivu)",
     theme_day: "Den",
     theme_night: "Noc",
     show_network: "Zobrazit síť",
@@ -2282,7 +2282,7 @@ const STRINGS = {
     show_logo: "Prikaži logotip znamke",
     illustration: "Ilustrirana glava",
     illustration_theme: "Tema ilustracije",
-    theme_auto: "Samodejno (sonce ali temna tema)",
+    theme_auto: "Samodejno (sledi temi)",
     theme_day: "Dan",
     theme_night: "Noč",
     show_network: "Prikaži omrežje",
@@ -2386,7 +2386,7 @@ const STRINGS = {
     show_logo: "Rādīt zīmola logotipu",
     illustration: "Ilustrēta galvene",
     illustration_theme: "Ilustrācijas tēma",
-    theme_auto: "Automātiski (saule vai tumšā tēma)",
+    theme_auto: "Automātiski (pēc tēmas)",
     theme_day: "Diena",
     theme_night: "Nakts",
     show_network: "Rādīt tīklu",
@@ -2489,7 +2489,7 @@ const STRINGS = {
     show_logo: "Εμφάνιση λογότυπου μάρκας",
     illustration: "Εικονογραφημένη κεφαλίδα",
     illustration_theme: "Θέμα εικονογράφησης",
-    theme_auto: "Αυτόματο (ήλιος ή σκούρο θέμα)",
+    theme_auto: "Αυτόματο (ακολουθεί το θέμα)",
     theme_day: "Ημέρα",
     theme_night: "Νύχτα",
     show_network: "Εμφάνιση δικτύου",
@@ -3894,7 +3894,7 @@ class RouterBase extends HTMLElement {
   // uptime shown in days, hours and minutes.
   _signature() {
     const h = this._hass;
-    const sig = [h.entities, h.devices, h.language, h.locale?.language, h.config?.time_zone, h.states?.["sun.sun"]?.state, h.themes?.darkMode];
+    const sig = [h.entities, h.devices, h.language, h.locale?.language, h.config?.time_zone, h.themes?.darkMode];
     const box = boxFor(h, this._config);
     if (!box.id) return sig;
     const refs = [

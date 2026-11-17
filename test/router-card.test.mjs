@@ -311,11 +311,12 @@ test("Cudy (ha-cudy-router): English names without translation keys; total rates
   assert.deepEqual(plain(box.nodes.map((n) => n.name)), ["Mesh Bedroom"]);
 });
 
-test("night picture: the sun below the horizon or the dark theme, even while the sun is up; illustration_theme wins", () => {
+test("night picture: the dark theme alone; illustration_theme wins", () => {
   const h = (state, darkMode = false) => ({ states: state ? { "sun.sun": { state } } : {}, themes: { darkMode } });
   assert.equal(rcIsNight(h("above_horizon", true), {}), true);
   assert.equal(rcIsNight(h("above_horizon"), {}), false);
-  assert.equal(rcIsNight(h("below_horizon"), {}), true);
+  assert.equal(rcIsNight(h("below_horizon"), {}), false, "light theme after sunset: day");
+  assert.equal(rcIsNight(h("below_horizon", true), {}), true);
   assert.equal(rcIsNight(h("unavailable", true), {}), true);
   assert.equal(rcIsNight(h(null), {}), false);
   assert.equal(rcIsNight(h("below_horizon", true), { illustration_theme: "day" }), false);
