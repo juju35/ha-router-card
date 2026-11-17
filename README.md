@@ -44,6 +44,7 @@ Entities are **discovered automatically**, you don't have to pick them one by on
 - Two cards: a full **Router Card** and a compact **Router Mini Card**
 - Detail button at the top right of the mini card: it shows the full card in its place (same device and options), and the collapse button, or a click anywhere outside the card, brings the compact view back (`zoom: false` removes it)
 - Automatic discovery of the router's entities, by the integration's own translation keys and attributes first, then by the kind of each entity (device class, unit) and the words of its key and entity id, in any language. An integration the card does not know still shows what it can recognise
+- Illustrated header, 90 px on both cards: a network scene with the WAN cable arriving into the device's drawing (standing on a network ground strip), Wi-Fi waves and packets travelling to the connected clients; when the WAN is down the cable is cut in red, links and waves turn grey and the strip turns red. Night version (sun below the horizon or dark theme, or `illustration_theme`), animations off with reduced motion; `illustration: false` brings back the classic header
 - Header icon of the kind of device (firewall, router, mesh unit, access point) coloured with the WAN state like the status pill (green online, red offline, grey unavailable; the brand colour when the integration reports no WAN state), with the brand logo as a badge
 - A drawing of the kind of device, in the brand's colour, opening the admin interface; model and firmware under the name; a chip when a firmware update is waiting
 - Download / upload rates of the WAN, in bytes (kB/s, MB/s) or bits (kb/s, Mb/s), with their last 24 hours drawn behind each tile (recorder statistics), on the full card and the mini card
@@ -156,6 +157,8 @@ show_title: true
 show_subtitle: true
 show_image: true
 show_logo: true
+illustration: true
+illustration_theme: auto
 show_network: true
 show_history: true
 show_speedtest: true
@@ -199,11 +202,13 @@ rate_unit: bits
 | `device` | both | First router found | Device to display: its device id (pick it in the visual editor), or `platform:<integration>` for an integration with trackers only (Ruckus Unleashed, LuCI) |
 | `title` | both | Device name | Card title |
 | `show_title` | both | `true` | Show the title in the header (e.g. `false` under a section heading of your own) |
-| `show_subtitle` | both | `true` | Show the model and firmware under the title |
+| `show_subtitle` | both | `true` | Show the subtitle (WAN state and clients on the illustrated header, then model and firmware) |
 | `kind` | both | Detected | Kind of device, for the header icon and the drawing: `firewall`, `router`, `mesh` or `ap` (the integration's, or from the model for UniFi and Omada) |
 | `admin_url` | both | Device's own | Admin interface opened when clicking the picture (else the device's configuration URL, else the brand's usual address) |
 | `show_image` | both | `true` | Show the drawing of the kind of device |
 | `show_logo` | both | `true` | Show the header icon, coloured with the WAN state, with the brand logo (opens the brand website when clicked) |
+| `illustration` | both | `true` | Illustrated header (network scene with the device's drawing, WAN state, clients); `false` for the classic header |
+| `illustration_theme` | both | `auto` | `auto` (night when the sun is below the horizon or with a dark theme, even while the sun is up), `day` or `night` |
 | `show_network` | both | `true` | Download / upload rates (and WAN IP, uptime, latency, speed test on the full card) |
 | `show_history` | both | `true` | 24 h curves behind the rate tiles and the CPU / RAM / disk gauges, from the recorder's 5-minute statistics (sensors with a `state_class`): the curve breaks where the recorder has no data |
 | `show_speedtest` | full | `true` | The last speed test in the network section (download, upload and ping; its time on hover) |
@@ -265,6 +270,14 @@ After a click on the detail button, the mini card shows the full card in its pla
 | Light | Dark |
 |---|---|
 | <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/mini-card-zoom.png" alt="router-mini-card zoomed" width="400"> | <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/mini-card-zoom-dark.png" alt="router-mini-card zoomed dark" width="400"> |
+
+### Animated captures
+
+WAN up, the WAN cable flows into the device, packets travel to the connected clients and the Wi-Fi waves blink (WAN down or unavailable, the scene stands still; animations stop with reduced motion):
+
+| Light | Dark |
+|---|---|
+| <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/header-online.gif" alt="animated header, WAN up" width="400"> | <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/header-online-dark.gif" alt="animated header, WAN up, dark" width="400"> |
 
 ### Drawings
 

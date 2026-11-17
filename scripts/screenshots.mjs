@@ -1,14 +1,16 @@
 // Renders the cards with mock data (a UniFi gateway as the reference router, then each other integration of
 // scripts/mock-states.mjs) and saves the README screenshots.
+// The animated header is recorded as GIFs too (needs ffmpeg on PATH).
 // Usage: npm run build && npm run screenshots
 import { chromium } from "playwright";
-import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { states, entities, devices, integrations, NOW } from "./mock-states.mjs";
 import { load } from "../test/load.mjs";
-import { saveIfChanged } from "./capture.mjs";
+import { freezeAnimations, saveIfChanged } from "./capture.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const cardJs = readFileSync(`${root}dist/router-card.js`, "utf8");
@@ -70,6 +72,16 @@ for (const theme of ["light", "dark"]) {
   }
 }
 
+// Animated header, one GIF per animated state, light and dark: WAN up, the WAN cable flows into the device, packets
+// travel to the clients and the Wi-Fi waves blink (WAN down or unavailable, the scene stands still: stills only).
+const gifs = ["light", "dark"].map((theme) => ({
+  file: `header-online${theme === "dark" ? "-dark" : ""}`,
+  type: "router-card",
+  theme,
+  width: 460,
+  config: {},
+}));
+
 // Mount one card on a fresh page and return it (shared by the stills and the GIF). Keeps the fixed clock and the
 // UTC time zone so the card's uptime and times render the same every run.
 async function openCard(browser, s) {
@@ -81,7 +93,7 @@ async function openCard(browser, s) {
   await page.addScriptTag({ content: HA_CARD });
   await page.addScriptTag({ content: cardJs });
   await page.evaluate(
-    ({ type, config, zoom, states, entities, devices }) => {
+    ({ type, config, zoom, dark, states, entities, devices }) => {
       const el = document.createElement(type);
       el.setConfig({ type: `custom:${type}`, ...config });
       // Recorder statistics: a plausible 24 h rate curve for each rate sensor (busy evening, quiet night), 5-minute
@@ -99,13 +111,13 @@ async function openCard(browser, s) {
             })).filter((_, i) => i < 60 || i >= 72),
           ])
         );
-      el.hass = { states, entities, devices, language: "en", locale: { language: "en" }, config: { time_zone: "UTC" }, callWS };
+      el.hass = { states, entities, devices, language: "en", locale: { language: "en" }, config: { time_zone: "UTC" }, themes: { darkMode: dark }, callWS };
       document.getElementById("root").appendChild(el);
       // A mouse click (click count 1), not .click(): no focus ring on the button.
       if (zoom)
         el.shadowRoot.querySelector(".zoom").dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
     },
-    { type: s.type, config: s.config, zoom: !!s.zoom, ...(s.mock || { states, entities, devices }) }
+    { type: s.type, config: s.config, zoom: !!s.zoom, dark: s.theme === "dark", ...(s.mock || { states, entities, devices }) }
   );
   return page;
 }
@@ -127,5 +139,35 @@ for (const s of shots) {
   console.log(`screenshots/${s.file}.png${saveIfChanged(tmp, `${root}screenshots/${s.file}.png`) ? "" : " (unchanged)"}`);
   await page.close();
 }
+
+// Records the card's header (the banner, cropped) as a looping GIF. Every animation is paused and stepped frame by
+// frame, so the GIF is identical whatever the machine's speed.
+async function recordGif(browser, g, { fps = 15, seconds = 3 } = {}) {
+  const page = await openCard(browser, g);
+  await page.waitForTimeout(300);
+  const box = await page.evaluate(() => {
+    const r = document.querySelector("#root").firstElementChild.shadowRoot.querySelector(".banner").getBoundingClientRect();
+    return { y: r.y, bottom: r.bottom };
+  });
+  const clip = { x: 8, y: 8, width: g.width + 16, height: Math.ceil(box.bottom) - 8 };
+  const dir = mkdtempSync(join(tmpdir(), "rc-frames-"));
+  for (let i = 0; i < fps * seconds; i++) {
+    // A header with nothing to step would record frames at the machine's speed again.
+    if (!(await freezeAnimations(page, (i * 1000) / fps))) throw new Error(`${g.file}: no animation found to step`);
+    await page.screenshot({ path: join(dir, `f${String(i).padStart(3, "0")}.png`), clip });
+  }
+  await page.close();
+  const tmp = join(dir, "out.gif");
+  // Halve the retina capture, one palette computed from all the frames and an ordered (Bayer) dither: deterministic.
+  execFileSync("ffmpeg", [
+    "-y", "-loglevel", "error", "-framerate", String(fps), "-i", join(dir, "f%03d.png"),
+    "-vf", `scale=${clip.width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=4`,
+    "-loop", "0", tmp,
+  ]);
+  console.log(`screenshots/${g.file}.gif${saveIfChanged(tmp, `${root}screenshots/${g.file}.gif`) ? "" : " (unchanged)"}`);
+  rmSync(dir, { recursive: true });
+}
+
+for (const g of gifs) await recordGif(browser, g);
 
 await browser.close();

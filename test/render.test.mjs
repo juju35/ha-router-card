@@ -179,3 +179,113 @@ test("a Wi-Fi network goes off and the router restarts only once confirmed; Wi-F
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+// In-page audit of the header (string spliced into page.evaluate): every title block with a status pill —
+// the pill on the title row only beside a whole title, its label whole or its dot alone (≤ 200 px: dot alone),
+// nothing of the title block below the banner's ground strip or outside the banner.
+const pillAudit = (r, width, pillSel, nameSel, groundSel, bannerSel = ".banner") => {
+  const res = [];
+  const shown = (e) => e && e.getClientRects().length && getComputedStyle(e).visibility !== "hidden";
+  const cut = (e) => [e, ...e.querySelectorAll("*")].some((x) => shown(x) && x.clientWidth > 1 && getComputedStyle(x).overflow !== "visible" && x.scrollWidth > x.clientWidth + 1);
+  const pills = [...r.querySelectorAll(pillSel)].filter(shown);
+  if (!pills.length) return ["no pill"];
+  for (const pill of pills) {
+    const pb = pill.getBoundingClientRect();
+    const dot = pb.width < 30;
+    if (width <= 200 && !dot) res.push(`pill "${pill.textContent.trim()}" not a dot at ${width}px`);
+    if (!dot && cut(pill)) res.push(`pill "${pill.textContent.trim()}" label cut`);
+    const name = pill.parentElement.querySelector(nameSel) || pill.closest(".titles")?.querySelector(nameSel);
+    if (shown(name)) {
+      const nb = name.getBoundingClientRect();
+      const onRow = Math.abs(pb.top + pb.height / 2 - (nb.top + nb.height / 2)) < nb.height / 2;
+      const range = document.createRange();
+      range.selectNodeContents(name);
+      if (onRow && range.getBoundingClientRect().width > nb.width + 0.01) res.push(`title "${name.textContent.trim()}" ellipsised beside the pill`);
+    }
+    const banner = pill.closest(bannerSel);
+    if (!banner) continue;
+    const bb = banner.getBoundingClientRect();
+    const floor = banner.querySelector(groundSel)?.getBoundingClientRect().top ?? bb.bottom;
+    const block = pill.closest(".titles") || pill.parentElement;
+    for (const x of [block, ...block.children, ...block.querySelectorAll(":scope > .trow > *")]) {
+      if (!shown(x)) continue;
+      const xb = x.getBoundingClientRect();
+      if (!xb.width || !xb.height) continue;
+      if (xb.bottom > floor + 0.5 || xb.top < bb.top - 0.5 || xb.right > bb.right + 0.5 || xb.left < bb.left - 0.5) {
+        res.push(`${x.className || x.tagName} outside the banner above its ground strip`);
+        break;
+      }
+    }
+  }
+  return res;
+};
+
+// en, fr, de, hu, el and ru from 190 to 500 px, the device's own title and a long one, full card, mini card and zoomed
+// mini card (UniFi: an update waiting, so the full card also has its second pill).
+test("status pill: beside a whole title or under the subtitle, label whole or dot alone, inside the banner", async (t) => {
+  if (skip) return t.skip(skip);
+  const failures = [];
+  for (const type of ["router-card", "router-mini-card"])
+    for (const zoom of type === "router-mini-card" ? [false, true] : [false]) {
+      const { page, errors } = await open(type, integrations.unifi, { width: 500 });
+      const out = await page.evaluate(
+        async ({ type, zoom, audit }) => {
+          const pillAudit = new Function(`return (${audit})`)();
+          const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const hass = window.card.hass;
+          const res = [];
+          for (const classic of [false, true])
+          for (const language of ["en", "fr", "de", "hu", "el", "ru"])
+            for (const width of [190, 245, 300, 400, 460, 500])
+              for (const title of [undefined, "Dream Machine Pro Max Living room"]) {
+                const root = document.getElementById("root");
+                root.style.width = `${width}px`;
+                const el = document.createElement(type);
+                el.setConfig({ type: `custom:${type}`, language, ...(title ? { title } : {}), ...(classic ? { illustration: false } : {}) });
+                el.hass = { ...hass, language, locale: { language } };
+                root.replaceChildren(el);
+                if (zoom) window.click(el.shadowRoot.querySelector(".zoom"));
+                await frame();
+                await frame();
+                const what = `${type}${classic ? " classic" : ""}${zoom ? " zoomed" : ""} ${language} ${width}px${title ? " long title" : ""}`;
+                const pills = classic ? ".header .chip.status" : ".banner .chip.status, .banner .trow > .chip.upd";
+                if (classic) {
+                  // The classic header: the pill right after the title (8 px) when it shares its line.
+                  const p = el.shadowRoot.querySelector(".header .chip.status").getBoundingClientRect();
+                  const n = el.shadowRoot.querySelector(".header .name").getBoundingClientRect();
+                  if (Math.abs(p.top + p.height / 2 - (n.top + n.height / 2)) < n.height / 2 && Math.abs(p.left - n.right - 8) > 1)
+                    res.push(`${what}: pill ${Math.round(p.left - n.right)}px after the title`);
+                }
+                for (const f of pillAudit(el.shadowRoot, width, pills, ".name", ".rc-ground")) res.push(`${what}: ${f}`);
+                const p = el.shadowRoot.querySelector(".chip.status");
+                if (p.getAttribute("aria-label") !== { en: "WAN · Online" }[language] && language === "en") res.push(`${what}: label ${p.getAttribute("aria-label")}`);
+              }
+          return res;
+        },
+        { type, zoom, audit: pillAudit.toString() }
+      );
+      failures.push(...out, ...errors);
+      await page.close();
+    }
+  assert.deepEqual(failures, []);
+});
+
+test("header buttons: the detail button in the banner's top right corner, the restart button on its left", async (t) => {
+  if (skip) return t.skip(skip);
+  for (const zoom of [false, true])
+    for (const width of [245, 300, 400]) {
+      const { page } = await open("router-mini-card", integrations.unifi, { width });
+      if (zoom) await page.evaluate(() => window.click(window.card.shadowRoot.querySelector(".zoom")));
+      const r = await page.evaluate(() => {
+        const root = window.card.shadowRoot;
+        const b = root.querySelector(".banner").getBoundingClientRect();
+        const z = root.querySelector(".zoom").getBoundingClientRect();
+        const a = root.querySelector(".banner .action")?.getBoundingClientRect();
+        return { top: z.top - b.top, right: b.right - z.right, w: z.width, h: z.height, a: a && { top: a.top - b.top, gap: z.left - a.right } };
+      });
+      const at = `${zoom ? "zoomed" : "compact"} ${width}px`;
+      assert.deepEqual([r.top, r.right, r.w, r.h], [5, 5, 24, 24], at);
+      if (zoom) assert.deepEqual([r.a.top, r.a.gap], [5, 4], `${at}: restart button`);
+      await page.close();
+    }
+});

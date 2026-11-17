@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 - 2026-11-17
+
+### Features
+- **Illustrated header** on the full and mini cards (90 px): a network scene with the WAN cable arriving into the device's own drawing (firewall, router, mesh unit or access point, in the brand's colour), standing on a network ground strip, with Wi-Fi waves and packets travelling to the connected clients. WAN down: the cable is cut in red with a cross, links and waves grey, a red-dashed strip; WAN unavailable: everything grey. The header icon keeps the WAN state colour and the brand logo badge; the WAN state is the status pill right after the title, and the firmware update pill after it, only while the whole title and the pills' whole labels fit on that row (measured in the real fonts, so in every language), otherwise on their own line under a one-line subtitle, keeping their dot or icon alone when even that would not fit above the ground strip and at 200 px or less, on the mini card too (the classic header follows the same rule, its pill right after the title rather than in a column at the right); the subtitle shows the clients connected, model and firmware. Night version when the sun is below the horizon or with a dark theme (even while the sun is up), forced with `illustration_theme: day | night`; animations stop with reduced motion; `illustration: false` brings back the classic header. Both options are in the visual editors.
+- The detail button of the mini card sits in the top right corner of the banner (round, frosted), the restart button on its left on the same line.
+
+### Fixes
+- The 24 h sparklines no longer run under the text: the download / upload tiles and the CPU / RAM gauges draw theirs in a 24 px band of their own under the rate or the ring and its label.
+
 ## 1.1.0 - 2026-11-14
 
 ### Features
