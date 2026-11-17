@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 - 2026-11-17
+
+### Features
+- **Illustrated header** on the full and mini cards (90 px): a network scene with the WAN cable arriving into the device's own drawing (firewall, router, mesh unit or access point, in the brand's colour), standing on a network ground strip, with Wi-Fi waves and packets travelling to the connected clients. WAN down: the cable is cut in red with a cross, links and waves grey, a red-dashed strip; WAN unavailable: everything grey. The header icon keeps the WAN state colour and the brand logo badge; the subtitle starts with the WAN state and the clients connected. Night version when the sun is below the horizon (else with a dark theme), forced with `illustration_theme: day | night`; animations stop with reduced motion; `illustration: false` brings back the classic header. Both options are in the visual editors.
+
 ## 1.1.0 - 2026-11-14
 
 ### Features

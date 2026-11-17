@@ -81,7 +81,7 @@ async function openCard(browser, s) {
   await page.addScriptTag({ content: HA_CARD });
   await page.addScriptTag({ content: cardJs });
   await page.evaluate(
-    ({ type, config, zoom, states, entities, devices }) => {
+    ({ type, config, zoom, dark, states, entities, devices }) => {
       const el = document.createElement(type);
       el.setConfig({ type: `custom:${type}`, ...config });
       // Recorder statistics: a plausible 24 h rate curve for each rate sensor (busy evening, quiet night), 5-minute
@@ -99,13 +99,13 @@ async function openCard(browser, s) {
             })).filter((_, i) => i < 60 || i >= 72),
           ])
         );
-      el.hass = { states, entities, devices, language: "en", locale: { language: "en" }, config: { time_zone: "UTC" }, callWS };
+      el.hass = { states, entities, devices, language: "en", locale: { language: "en" }, config: { time_zone: "UTC" }, themes: { darkMode: dark }, callWS };
       document.getElementById("root").appendChild(el);
       // A mouse click (click count 1), not .click(): no focus ring on the button.
       if (zoom)
         el.shadowRoot.querySelector(".zoom").dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
     },
-    { type: s.type, config: s.config, zoom: !!s.zoom, ...(s.mock || { states, entities, devices }) }
+    { type: s.type, config: s.config, zoom: !!s.zoom, dark: s.theme === "dark", ...(s.mock || { states, entities, devices }) }
   );
   return page;
 }

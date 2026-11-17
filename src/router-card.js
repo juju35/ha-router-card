@@ -114,6 +114,95 @@ const devicePic = (kind, accent) => {
   return _tinted.get(key);
 };
 
+// ---------------------------------------------------------------------------
+// Illustrated header: a network scene at the right of the 90 px banner (200 × 80 picture over a 10 px ground
+// strip): the WAN cable arriving from the left into the device, the device's own picture (above) standing on the
+// strip, Wi-Fi waves and links to three connected clients with packets travelling on them. WAN down: the cable is
+// cut (dashed red, a red cross), links and waves grey, no packets. The left of the banner is the card's text.
+// ---------------------------------------------------------------------------
+
+// Dots of the background grid (a faint network pattern), built once.
+const RC_DOTS = (() => {
+  const d = [];
+  for (let y = 6; y < 60; y += 6) for (let x = 86; x < 200; x += 6) if ((x * 7 + y * 13) % 11 < 6) d.push(`<circle cx="${x}" cy="${y}" r=".9"/>`);
+  return d.join("");
+})();
+// Clients: laptop, phone, TV, as [x, y, outline].
+const RC_CLIENTS = [
+  [110, 22, "M-5 -3 h10 v6 h-10z M-7 3 h14"],
+  [132, 12, "M-3 -5 h6 v10 h-6z"],
+  [184, 16, "M-6 -4 h12 v7 h-12z M-2 5 h4"],
+];
+// Bounding box of each drawing in its own picture (x, y, width, height):
+// the device is cut to its box and fitted in 78 × 46, centred at x 158, its shadow on the strip.
+const RC_ART = { firewall: [32, 82, 236, 77], router: [58, 26, 184, 132], mesh: [90, 16, 120, 162], ap: [32, 46, 236, 110] };
+
+// Device placed in the scene: { x, y, w, h, vb } in scene units.
+const rcPlace = (kind) => {
+  const [bx, by, bw, bh] = RC_ART[kind] || RC_ART.router;
+  const m = Math.max(bw, bh) * 0.03;
+  const vb = [bx - m, by - m, bw + 2 * m, bh + 2 * m];
+  let h = 46;
+  let w = (h * vb[2]) / vb[3];
+  if (w > 78) {
+    w = 78;
+    h = (w * vb[3]) / vb[2];
+  }
+  const r = (v) => Math.round(v * 10) / 10;
+  return { x: r(158 - w / 2), y: r(78 - h), w: r(w), h: r(h), vb: vb.map(r).join(" ") };
+};
+
+// The device's picture cut to its drawing (its viewBox set to the drawing's box), built once per picture.
+const _cropped = new Map();
+const rcCrop = (pic, vb) => {
+  const key = `${vb}|${pic}`;
+  if (!_cropped.has(key)) {
+    const svg = decodeURIComponent(pic.slice(pic.indexOf(",") + 1)).replace(/viewBox="[^"]*"/, `viewBox="${vb}"`);
+    _cropped.set(key, svgUri(svg));
+  }
+  return _cropped.get(key);
+};
+
+/**
+ * The scene's SVG. `state`: "ok" (WAN up, or no WAN sensor), "down" (WAN down) or "off" (WAN unavailable); `pic`
+ * the device's picture (none: no device), `href` the admin address opened by a click on the device. `uid` keeps
+ * the ids of each card apart on a page with several cards.
+ */
+const rcSceneSvg = ({ uid, state, kind, pic, href, label }) => {
+  const live = state === "ok";
+  const links = RC_CLIENTS.map(([x, y, d], i) => {
+    const path = `M160 52 Q${(160 + x) / 2} ${y + 10} ${x} ${y + 6}`;
+    const pkt = live ? `<circle class="rc-pkt" r="1.4" style="offset-path:path('${path}');animation-duration:${(1.4 + i * 0.4).toFixed(1)}s"/>` : "";
+    return `<path class="rc-link" d="${path}"/>${pkt}<g transform="translate(${x} ${y})"><circle class="rc-client" r="8"/><path class="rc-client-ln" d="${d}"/></g>`;
+  }).join("");
+  let dev = "";
+  if (pic) {
+    const p = rcPlace(kind);
+    const img = `<image class="rc-dev" href="${rcCrop(pic, p.vb)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" preserveAspectRatio="xMidYMax meet"/>`;
+    dev = href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer"><title>${esc(label)}</title>${img}</a>` : img;
+  }
+  return `<svg class="rc-scene ${state}" viewBox="0 0 200 80" preserveAspectRatio="xMaxYMax meet" aria-hidden="true" focusable="false">
+    <defs><radialGradient id="rc-glow-${uid}"><stop offset="0" stop-color="#2fd0ff" stop-opacity=".35"/><stop offset="1" stop-color="#2fd0ff" stop-opacity="0"/></radialGradient></defs>
+    <g class="rc-dots">${RC_DOTS}</g>
+    ${live ? `<ellipse class="rc-glow" cx="158" cy="50" rx="34" ry="26" fill="url(#rc-glow-${uid})"/>` : ""}
+    <path class="rc-cable" d="M80 70 H150"/><path class="rc-wan" d="M80 70 H150"/>
+    ${links}
+    <g class="rc-waves" transform="translate(160 40)"><path class="w1" d="M-6 -4 a8 8 0 0 1 12 0"/><path class="w2" d="M-11 -9 a15 15 0 0 1 22 0"/><path class="w3" d="M-16 -14 a22 22 0 0 1 32 0"/></g>
+    ${state === "down" ? '<g class="rc-cut" transform="translate(116 70)"><circle r="6"/><path d="M-2.6 -2.6 l5.2 5.2 M2.6 -2.6 l-5.2 5.2"/></g>' : ""}
+    ${dev}
+  </svg>`;
+};
+
+// Night picture: forced by illustration_theme, else the sun below the horizon, else Home Assistant's dark mode.
+const rcIsNight = (hass, config) => {
+  const theme = config?.illustration_theme;
+  if (theme === "night") return true;
+  if (theme === "day") return false;
+  const sun = hass?.states?.["sun.sun"];
+  if (sun && !["unavailable", "unknown", ""].includes(String(sun.state))) return sun.state === "below_horizon";
+  return !!hass?.themes?.darkMode;
+};
+
 const ICONS = {
   down: "M9,4H15V12H19.84L12,19.84L4.16,12H9V4Z",
   up: "M15,20H9V12H4.16L12,4.16L19.84,12H15V20Z",
@@ -215,6 +304,11 @@ const STRINGS = {
     show_subtitle: "Show subtitle",
     show_image: "Show the device picture",
     show_logo: "Show the brand logo",
+    illustration: "Illustrated header",
+    illustration_theme: "Illustration theme",
+    theme_auto: "Automatic (sun, dark theme)",
+    theme_day: "Day",
+    theme_night: "Night",
     show_network: "Show network",
     show_history: "Show 24 h history",
     show_speedtest: "Show the last speed test",
@@ -313,6 +407,11 @@ const STRINGS = {
     show_subtitle: "Afficher le sous-titre",
     show_image: "Afficher l'illustration de l'appareil",
     show_logo: "Afficher le logo de la marque",
+    illustration: "En-tête illustré",
+    illustration_theme: "Thème de l'illustration",
+    theme_auto: "Automatique (soleil, thème sombre)",
+    theme_day: "Jour",
+    theme_night: "Nuit",
     show_network: "Afficher le réseau",
     show_history: "Afficher l'historique sur 24 h",
     show_speedtest: "Afficher le dernier test de débit",
@@ -411,6 +510,11 @@ const STRINGS = {
     show_subtitle: "Untertitel anzeigen",
     show_image: "Gerätebild anzeigen",
     show_logo: "Markenlogo anzeigen",
+    illustration: "Illustrierter Kopfbereich",
+    illustration_theme: "Thema der Illustration",
+    theme_auto: "Automatisch (Sonne, dunkles Thema)",
+    theme_day: "Tag",
+    theme_night: "Nacht",
     show_network: "Netzwerk anzeigen",
     show_history: "24-h-Verlauf anzeigen",
     show_speedtest: "Letzten Geschwindigkeitstest anzeigen",
@@ -509,6 +613,11 @@ const STRINGS = {
     show_subtitle: "Mostrar el subtítulo",
     show_image: "Mostrar la imagen del equipo",
     show_logo: "Mostrar el logotipo de la marca",
+    illustration: "Encabezado ilustrado",
+    illustration_theme: "Tema de la ilustración",
+    theme_auto: "Automático (sol, tema oscuro)",
+    theme_day: "Día",
+    theme_night: "Noche",
     show_network: "Mostrar la red",
     show_history: "Mostrar el historial de 24 h",
     show_speedtest: "Mostrar el último test de velocidad",
@@ -606,6 +715,11 @@ const STRINGS = {
     show_subtitle: "Mostra il sottotitolo",
     show_image: "Mostra l'immagine del dispositivo",
     show_logo: "Mostra il logo del marchio",
+    illustration: "Intestazione illustrata",
+    illustration_theme: "Tema dell'illustrazione",
+    theme_auto: "Automatico (sole, tema scuro)",
+    theme_day: "Giorno",
+    theme_night: "Notte",
     show_network: "Mostra la rete",
     show_history: "Mostra la cronologia di 24 h",
     show_speedtest: "Mostra l'ultimo test di velocità",
@@ -704,6 +818,11 @@ const STRINGS = {
     show_subtitle: "Ondertitel tonen",
     show_image: "Afbeelding van het apparaat tonen",
     show_logo: "Merklogo tonen",
+    illustration: "Geïllustreerde koptekst",
+    illustration_theme: "Thema van de illustratie",
+    theme_auto: "Automatisch (zon, donker thema)",
+    theme_day: "Dag",
+    theme_night: "Nacht",
     show_network: "Netwerk tonen",
     show_history: "Geschiedenis van 24 uur tonen",
     show_speedtest: "Laatste snelheidstest tonen",
@@ -802,6 +921,11 @@ const STRINGS = {
     show_subtitle: "Mostrar o subtítulo",
     show_image: "Mostrar a imagem do equipamento",
     show_logo: "Mostrar o logótipo da marca",
+    illustration: "Cabeçalho ilustrado",
+    illustration_theme: "Tema da ilustração",
+    theme_auto: "Automático (sol, tema escuro)",
+    theme_day: "Dia",
+    theme_night: "Noite",
     show_network: "Mostrar a rede",
     show_history: "Mostrar o histórico de 24 h",
     show_speedtest: "Mostrar o último teste de velocidade",
@@ -902,6 +1026,11 @@ const STRINGS = {
     show_subtitle: "Pokaż podtytuł",
     show_image: "Pokaż obrazek urządzenia",
     show_logo: "Pokaż logo marki",
+    illustration: "Ilustrowany nagłówek",
+    illustration_theme: "Motyw ilustracji",
+    theme_auto: "Automatycznie (słońce, ciemny motyw)",
+    theme_day: "Dzień",
+    theme_night: "Noc",
     show_network: "Pokaż sieć",
     show_history: "Pokaż historię z 24 h",
     show_speedtest: "Pokaż ostatni test prędkości",
@@ -1001,6 +1130,11 @@ const STRINGS = {
     show_subtitle: "Прикажи поднаслов",
     show_image: "Прикажи слику уређаја",
     show_logo: "Прикажи лого бренда",
+    illustration: "Илустровано заглавље",
+    illustration_theme: "Тема илустрације",
+    theme_auto: "Аутоматски (сунце, тамна тема)",
+    theme_day: "Дан",
+    theme_night: "Ноћ",
     show_network: "Прикажи мрежу",
     show_history: "Прикажи историју за 24 ч",
     show_speedtest: "Прикажи последњи тест брзине",
@@ -1100,6 +1234,11 @@ const STRINGS = {
     show_subtitle: "Prikaži podnaslov",
     show_image: "Prikaži sliku uređaja",
     show_logo: "Prikaži logo brenda",
+    illustration: "Ilustrovano zaglavlje",
+    illustration_theme: "Tema ilustracije",
+    theme_auto: "Automatski (sunce, tamna tema)",
+    theme_day: "Dan",
+    theme_night: "Noć",
     show_network: "Prikaži mrežu",
     show_history: "Prikaži istoriju za 24 č",
     show_speedtest: "Prikaži poslednji test brzine",
@@ -1199,6 +1338,11 @@ const STRINGS = {
     show_subtitle: "Afișează subtitlul",
     show_image: "Afișează imaginea echipamentului",
     show_logo: "Afișează sigla mărcii",
+    illustration: "Antet ilustrat",
+    illustration_theme: "Tema ilustrației",
+    theme_auto: "Automat (soare, temă întunecată)",
+    theme_day: "Zi",
+    theme_night: "Noapte",
     show_network: "Afișează rețeaua",
     show_history: "Afișează istoricul pe 24 h",
     show_speedtest: "Afișează ultimul test de viteză",
@@ -1297,6 +1441,11 @@ const STRINGS = {
     show_subtitle: "Vis undertitel",
     show_image: "Vis billede af enheden",
     show_logo: "Vis mærkets logo",
+    illustration: "Illustreret overskrift",
+    illustration_theme: "Illustrationens tema",
+    theme_auto: "Automatisk (sol, mørkt tema)",
+    theme_day: "Dag",
+    theme_night: "Nat",
     show_network: "Vis netværk",
     show_history: "Vis historik for 24 t",
     show_speedtest: "Vis seneste hastighedstest",
@@ -1395,6 +1544,11 @@ const STRINGS = {
     show_subtitle: "Visa undertitel",
     show_image: "Visa bild av enheten",
     show_logo: "Visa märkets logotyp",
+    illustration: "Illustrerad rubrik",
+    illustration_theme: "Illustrationens tema",
+    theme_auto: "Automatiskt (sol, mörkt tema)",
+    theme_day: "Dag",
+    theme_night: "Natt",
     show_network: "Visa nätverk",
     show_history: "Visa historik för 24 h",
     show_speedtest: "Visa senaste hastighetstestet",
@@ -1493,6 +1647,11 @@ const STRINGS = {
     show_subtitle: "Покажи подзаглавието",
     show_image: "Покажи изображението на устройството",
     show_logo: "Покажи логото на марката",
+    illustration: "Илюстрирана заглавна част",
+    illustration_theme: "Тема на илюстрацията",
+    theme_auto: "Автоматично (слънце, тъмна тема)",
+    theme_day: "Ден",
+    theme_night: "Нощ",
     show_network: "Покажи мрежата",
     show_history: "Покажи историята за 24 ч",
     show_speedtest: "Покажи последния тест на скоростта",
@@ -1593,6 +1752,11 @@ const STRINGS = {
     show_subtitle: "Показывать подзаголовок",
     show_image: "Показывать изображение устройства",
     show_logo: "Показывать логотип марки",
+    illustration: "Иллюстрированный заголовок",
+    illustration_theme: "Тема иллюстрации",
+    theme_auto: "Автоматически (солнце, тёмная тема)",
+    theme_day: "День",
+    theme_night: "Ночь",
     show_network: "Показывать сеть",
     show_history: "Показывать историю за 24 ч",
     show_speedtest: "Показывать последний тест скорости",
@@ -1693,6 +1857,11 @@ const STRINGS = {
     show_subtitle: "Показувати підзаголовок",
     show_image: "Показувати зображення пристрою",
     show_logo: "Показувати логотип марки",
+    illustration: "Ілюстрований заголовок",
+    illustration_theme: "Тема ілюстрації",
+    theme_auto: "Автоматично (сонце, темна тема)",
+    theme_day: "День",
+    theme_night: "Ніч",
     show_network: "Показувати мережу",
     show_history: "Показувати історію за 24 год",
     show_speedtest: "Показувати останній тест швидкості",
@@ -1790,6 +1959,11 @@ const STRINGS = {
     show_subtitle: "Alcím megjelenítése",
     show_image: "Eszközkép megjelenítése",
     show_logo: "Márkalogó megjelenítése",
+    illustration: "Illusztrált fejléc",
+    illustration_theme: "Az illusztráció témája",
+    theme_auto: "Automatikus (nap, sötét téma)",
+    theme_day: "Nappal",
+    theme_night: "Éjszaka",
     show_network: "Hálózat megjelenítése",
     show_history: "24 órás előzmények megjelenítése",
     show_speedtest: "Utolsó sebességmérés megjelenítése",
@@ -1890,6 +2064,11 @@ const STRINGS = {
     show_subtitle: "Zobraziť podnadpis",
     show_image: "Zobraziť obrázok zariadenia",
     show_logo: "Zobraziť logo značky",
+    illustration: "Ilustrovaná hlavička",
+    illustration_theme: "Téma ilustrácie",
+    theme_auto: "Automaticky (slnko, tmavá téma)",
+    theme_day: "Deň",
+    theme_night: "Noc",
     show_network: "Zobraziť sieť",
     show_history: "Zobraziť históriu za 24 h",
     show_speedtest: "Zobraziť posledný test rýchlosti",
@@ -1990,6 +2169,11 @@ const STRINGS = {
     show_subtitle: "Zobrazit podnadpis",
     show_image: "Zobrazit obrázek zařízení",
     show_logo: "Zobrazit logo značky",
+    illustration: "Ilustrovaná hlavička",
+    illustration_theme: "Motiv ilustrace",
+    theme_auto: "Automaticky (slunce, tmavý motiv)",
+    theme_day: "Den",
+    theme_night: "Noc",
     show_network: "Zobrazit síť",
     show_history: "Zobrazit historii za 24 h",
     show_speedtest: "Zobrazit poslední test rychlosti",
@@ -2090,6 +2274,11 @@ const STRINGS = {
     show_subtitle: "Prikaži podnaslov",
     show_image: "Prikaži sliko naprave",
     show_logo: "Prikaži logotip znamke",
+    illustration: "Ilustrirana glava",
+    illustration_theme: "Tema ilustracije",
+    theme_auto: "Samodejno (sonce, temna tema)",
+    theme_day: "Dan",
+    theme_night: "Noč",
     show_network: "Prikaži omrežje",
     show_history: "Prikaži 24-urno zgodovino",
     show_speedtest: "Prikaži zadnji test hitrosti",
@@ -2189,6 +2378,11 @@ const STRINGS = {
     show_subtitle: "Rādīt apakšvirsrakstu",
     show_image: "Rādīt ierīces attēlu",
     show_logo: "Rādīt zīmola logotipu",
+    illustration: "Ilustrēta galvene",
+    illustration_theme: "Ilustrācijas tēma",
+    theme_auto: "Automātiski (saule, tumšā tēma)",
+    theme_day: "Diena",
+    theme_night: "Nakts",
     show_network: "Rādīt tīklu",
     show_history: "Rādīt 24 h vēsturi",
     show_speedtest: "Rādīt pēdējo ātruma testu",
@@ -2287,6 +2481,11 @@ const STRINGS = {
     show_subtitle: "Εμφάνιση υπότιτλου",
     show_image: "Εμφάνιση εικόνας συσκευής",
     show_logo: "Εμφάνιση λογότυπου μάρκας",
+    illustration: "Εικονογραφημένη κεφαλίδα",
+    illustration_theme: "Θέμα εικονογράφησης",
+    theme_auto: "Αυτόματα (ήλιος, σκοτεινό θέμα)",
+    theme_day: "Ημέρα",
+    theme_night: "Νύχτα",
     show_network: "Εμφάνιση δικτύου",
     show_history: "Εμφάνιση ιστορικού 24 ωρών",
     show_speedtest: "Εμφάνιση τελευταίας δοκιμής ταχύτητας",
@@ -3225,6 +3424,66 @@ const BASE_STYLE = `
   .action:disabled:hover { background: none; color: var(--secondary-text-color); }
 `;
 
+// Illustrated header (illustration: true, the default): 90 px banner, the text on the left over the background,
+// the network scene on the right (200 × 80, smaller on a narrow card, hidden on a very narrow one) over a 10 px
+// ground strip, edge to edge. Day and night (.night) colours; the icon keeps the WAN state colour.
+const BANNER_STYLE = `
+  .banner { position: relative; overflow: hidden; height: 90px; padding: 0; box-sizing: border-box; display: block;
+            --rc-sky-text: #0d2a45; --rc-sky-muted: #3b5b78; background: #eaf2fb; color: var(--rc-sky-text); }
+  .banner.night { --rc-sky-text: #fff; --rc-sky-muted: rgba(255,255,255,.78); background: #101827; }
+  .banner .htext { position: absolute; z-index: 1; left: 12px; top: 0; bottom: 10px; right: calc(min(200px, 50cqw) + 4px);
+                   display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .banner .titles { display: flex; flex-direction: column; gap: 1px; }
+  .banner .name { color: var(--rc-sky-text); }
+  .banner .sub { color: var(--rc-sky-muted); max-height: 32px; line-height: 16px; }
+  .banner .sub .st .dot { margin: 0 4px 1px 0; vertical-align: middle; }
+  .banner + .content { padding-top: 10px; }
+  .banner .logo-link { align-self: center; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1px rgba(47,128,237,.18);
+                       --rc-icon: color-mix(in srgb, var(--rc-tint) 78%, #0d2a45); }
+  .banner.night .logo-link { background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+                             --rc-icon: color-mix(in srgb, var(--rc-tint) 72%, #fff); }
+  .banner .logo-link .icon.type .led { fill: rgba(255,255,255,.85); }
+  .banner.night .logo-link .icon.type .led { fill: #101827; }
+  .banner .logo { box-shadow: 0 0 0 1px rgba(13,42,69,.16), 0 1px 3px rgba(13,42,69,.18); }
+  .banner .action, .banner .zoom { margin: 0; color: var(--rc-sky-text); background: rgba(255,255,255,.55); }
+  .banner.night .action, .banner.night .zoom { background: rgba(255,255,255,.12); }
+  .banner .chips { margin-top: 2px; }
+  .banner .chip { background: rgba(255,255,255,.7); }
+  .banner.night .chip { background: rgba(10,20,40,.5); color: color-mix(in srgb, var(--c) 45%, #fff); }
+  .rc-scene { position: absolute; right: 0; bottom: 10px; height: 80px; width: min(200px, 50cqw); }
+  @container (max-width: 230px) { .rc-scene { display: none; } .banner .htext { right: 12px; } }
+  .rc-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; }
+  .g-net { background: #1e3a5f; background-image: repeating-linear-gradient(90deg, #4fc3f7 0 14px, transparent 14px 22px);
+           background-size: 100% 2px; background-repeat: no-repeat; background-position: 0 50%; box-shadow: inset 0 2px 0 #2f5a8a; }
+  .night .g-net { background-color: #0f1d33; box-shadow: inset 0 2px 0 #1e3a5f; }
+  .g-netdown { background: #5a6370; background-image: repeating-linear-gradient(90deg, #e5484d 0 6px, transparent 6px 16px);
+               background-size: 100% 2px; background-repeat: no-repeat; background-position: 0 50%; box-shadow: inset 0 2px 0 #77808c; }
+  .night .g-netdown { background-color: #2c323b; box-shadow: inset 0 2px 0 #3a414c; }
+  .rc-dots { fill: #c9dcf2; } .night .rc-dots { fill: #22324d; }
+  .rc-cable { fill: none; stroke: #b9c9dc; stroke-width: 4; stroke-linecap: round; } .night .rc-cable { stroke: #2a3446; }
+  .rc-wan { fill: none; stroke: #2fd0ff; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 4 26; animation: rc-flow 1.4s linear infinite; }
+  .down .rc-wan { stroke: #e5484d; stroke-dasharray: 3 4; animation: none; }
+  .off .rc-wan { stroke: #9aa3ae; stroke-dasharray: none; animation: none; }
+  .rc-link { fill: none; stroke: #43a047; stroke-width: 1; stroke-dasharray: 2 3; }
+  .down .rc-link, .off .rc-link { stroke: #9aa3ae; }
+  .rc-pkt { fill: #43a047; animation: rc-pkt 1.4s linear infinite; }
+  .rc-client { fill: #fff; stroke: #c9d2de; } .night .rc-client { fill: #1d2a3d; stroke: #33465f; }
+  .rc-client-ln { fill: none; stroke: #5f6b7a; stroke-width: 1.3; } .night .rc-client-ln { stroke: #9fb3cf; }
+  .rc-waves { fill: none; stroke: #2f80ed; stroke-width: 1.8; stroke-linecap: round; }
+  .down .rc-waves, .off .rc-waves { stroke: #9aa3ae; }
+  .ok .rc-waves path { animation: rc-blink 1.5s infinite; }
+  .ok .rc-waves .w2 { animation-delay: .25s; } .ok .rc-waves .w3 { animation-delay: .5s; }
+  .rc-cut circle { fill: #e5484d; } .rc-cut path { stroke: #fff; stroke-width: 1.6; }
+  .rc-glow { display: none; } .night .rc-glow { display: inline; }
+  .rc-dev { filter: drop-shadow(0 1.5px 1.5px rgba(0,0,0,.18)); }
+  .night .rc-dev { filter: drop-shadow(0 0 1.2px rgba(255,255,255,.55)) drop-shadow(0 0 5px rgba(170,200,255,.28)) brightness(1.12); }
+  .rc-scene a { cursor: pointer; }
+  @keyframes rc-flow { to { stroke-dashoffset: -30; } }
+  @keyframes rc-blink { 50% { opacity: .2; } }
+  @keyframes rc-pkt { from { offset-distance: 0%; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } to { offset-distance: 100%; opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .rc-wan, .rc-pkt, .rc-waves path { animation: none !important; } .rc-pkt { display: none; } }
+`;
+
 // In-card confirmation popup, at the top of the card so it stays in view when the card is long.
 const DIALOG_STYLE = `
   .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-start; justify-content: center;
@@ -3278,10 +3537,14 @@ function spark(points, end, peak) {
 /** Time of a recorder statistics row in ms: a number (Home Assistant 2023.3 and later) or an ISO date string. */
 const statTime = (p) => (typeof p.start === "number" ? p.start : Date.parse(p.start));
 
+// Number of each card instance: keeps the ids of the illustrations apart.
+let _rcUid = 0;
+
 class RouterBase extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this._uid = ++_rcUid;
     this._html = "";
     this._dialog = null;
     // No rewrite of the card between the press and the release: Home Assistant updates the card several times a
@@ -3570,7 +3833,7 @@ class RouterBase extends HTMLElement {
   // uptime shown in days, hours and minutes.
   _signature() {
     const h = this._hass;
-    const sig = [h.entities, h.devices, h.language, h.locale?.language, h.config?.time_zone];
+    const sig = [h.entities, h.devices, h.language, h.locale?.language, h.config?.time_zone, h.states?.["sun.sun"]?.state, h.themes?.darkMode];
     const box = boxFor(h, this._config);
     if (!box.id) return sig;
     const refs = [
@@ -3688,6 +3951,7 @@ class RouterBase extends HTMLElement {
       p.logo ? `<img class="logo" src="${p.logo}" alt="${esc(p.name)}">` : ""
     }${icon}</${tag}>`;
     const pic = devicePic(box.kind, p.color);
+    if (c.illustration !== false) return this._banner(box, full, { name, sub, model, firmware, brand, pic, adminUrl, state });
     const picHtml = `<img class="pic" src="${pic}" alt="${esc(this._t(`kind_${box.kind}`))}">`;
     return `
       <div class="header">
@@ -3707,6 +3971,49 @@ class RouterBase extends HTMLElement {
         }
         ${full ? this._restartBtn(box) : ""}
         ${this._headerEnd()}
+      </div>`;
+  }
+
+  // Illustrated header: the icon, title and subtitle on the left (the subtitle starts with the WAN state and the
+  // clients connected), the network scene on the right, the ground strip at the bottom; the restart and detail
+  // buttons at the end of the text.
+  _banner(box, full, { name, model, firmware, brand, pic, adminUrl, state }) {
+    const c = this._config;
+    const link = this._link(box);
+    const parts = [];
+    if (link)
+      parts.push(
+        `<span class="st clickable ${link.cls}" role="button" tabindex="0" data-entity="${link.entity}" title="${esc(this._t("wan"))}"><span class="dot"></span>${esc(this._t(link.key))}</span>`
+      );
+    const cl = this._clients(box);
+    if (cl && cl.n !== null) parts.push(`<span>${cl.n} ${esc(this._tn("clients_n", cl.n))}</span>`);
+    if (model) parts.push(`<span>${esc(model)}</span>`);
+    if (firmware) parts.push(`<span>${esc(`${this._t("firmware")} ${firmware}`)}</span>`);
+    if (!parts.length) parts.push(`<span>${esc(box.profile.name || this._t(`kind_${box.kind}`))}</span>`);
+    const scene = state === "crit" ? "down" : state === "off" ? "off" : "ok";
+    const night = rcIsNight(this._hass, c);
+    const svg = rcSceneSvg({
+      uid: this._uid,
+      state: scene,
+      kind: box.kind,
+      pic: c.show_image !== false ? pic : null,
+      href: adminUrl,
+      label: this._t("admin"),
+    });
+    return `
+      <div class="header banner${night ? " night" : ""}">
+        ${svg}
+        <div class="rc-ground ${scene === "down" ? "g-netdown" : "g-net"}"></div>
+        <div class="htext">
+          ${c.show_logo !== false ? brand : ""}
+          <div class="titles">
+            <div class="name">${esc(name)}</div>
+            <div class="sub"><div class="parts">${parts.join("")}</div></div>
+            ${full ? this._chips(box) : ""}
+          </div>
+          ${full ? this._restartBtn(box) : ""}
+          ${this._headerEnd()}
+        </div>
       </div>`;
   }
 
@@ -3831,7 +4138,7 @@ class RouterCard extends RouterBase {
     if (c.show_system !== false) parts.push(this._system(box, hist));
     if (c.show_nodes !== false) parts.push(this._nodes(box));
     if (c.show_lan !== false) parts.push(this._lan(box));
-    return `<style>${BASE_STYLE}${FULL_STYLE}</style>
+    return `<style>${BASE_STYLE}${FULL_STYLE}${c.illustration !== false ? BANNER_STYLE : ""}</style>
       <ha-card style="--rc-brand:${box.profile.color}">
         ${this._header(box, true)}
         <div class="content">${parts.filter(Boolean).join("")}</div>
@@ -4134,7 +4441,7 @@ class RouterMiniCard extends RouterCard {
     }
     const up = this._uptime(box);
     if (up !== null) foot.push(`<span data-key="uptime">${svgIcon(ICONS.timer)}${fmtUptime(up, this._hass, this._config)}</span>`);
-    return `<style>${BASE_STYLE}${MINI_STYLE}</style>
+    return `<style>${BASE_STYLE}${MINI_STYLE}${c.illustration !== false ? BANNER_STYLE : ""}</style>
       <ha-card style="--rc-brand:${box.profile.color}">
         ${this._header(box, false)}
         <div class="content">
@@ -4185,6 +4492,10 @@ class RouterEditorBase extends HTMLElement {
       },
       { name: "admin_url", selector: { text: { type: "url" } } },
       {
+        name: "illustration_theme",
+        selector: { select: { mode: "dropdown", options: ["auto", "day", "night"].map((v) => ({ value: v, label: tr(`theme_${v}`) })) } },
+      },
+      {
         type: "grid",
         name: "",
         schema: [
@@ -4192,6 +4503,7 @@ class RouterEditorBase extends HTMLElement {
           { name: "show_subtitle", selector: { boolean: {} } },
           { name: "show_image", selector: { boolean: {} } },
           { name: "show_logo", selector: { boolean: {} } },
+          { name: "illustration", selector: { boolean: {} } },
           ...this.constructor.toggles.map((name) => ({ name, selector: { boolean: {} } })),
         ],
       },
@@ -4251,7 +4563,7 @@ class RouterEditorBase extends HTMLElement {
         const config = { ...ev.detail.value, entities: cleanEntities(ev.detail.value.entities) };
         for (const [k, v] of Object.entries(config)) {
           // Keep the YAML minimal: drop empty values and options left at their default.
-          if (v === "" || v === undefined || v === null || ((k.startsWith("show_") || k === "zoom") && v === true) || (k === "rate_unit" && v === "bytes") || THRESHOLDS[k] === v)
+          if (v === "" || v === undefined || v === null || ((k.startsWith("show_") || k === "zoom" || k === "illustration") && v === true) || (k === "rate_unit" && v === "bytes") || (k === "illustration_theme" && v === "auto") || THRESHOLDS[k] === v)
             delete config[k];
         }
         this._config = config;
@@ -4267,8 +4579,8 @@ class RouterEditorBase extends HTMLElement {
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
       }
     }
-    const data = { rate_unit: "bytes", kind: "", ...THRESHOLDS, ...this._config };
-    for (const name of ["show_title", "show_subtitle", "show_image", "show_logo", ...this.constructor.toggles]) if (data[name] === undefined) data[name] = true;
+    const data = { rate_unit: "bytes", kind: "", illustration_theme: "auto", ...THRESHOLDS, ...this._config };
+    for (const name of ["show_title", "show_subtitle", "show_image", "show_logo", "illustration", ...this.constructor.toggles]) if (data[name] === undefined) data[name] = true;
     this._form.hass = this._hass;
     this._form.data = data;
     // The schema is rebuilt on every hass update (every state change) but only handed to the form when its options
