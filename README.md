@@ -208,7 +208,7 @@ rate_unit: bits
 | `show_image` | both | `true` | Show the drawing of the kind of device |
 | `show_logo` | both | `true` | Show the header icon, coloured with the WAN state, with the brand logo (opens the brand website when clicked) |
 | `illustration` | both | `true` | Illustrated header (network scene with the device's drawing, WAN state, clients); `false` for the classic header |
-| `illustration_theme` | both | `auto` | `auto` (night when the sun is below the horizon, else with a dark theme), `day` or `night` |
+| `illustration_theme` | both | `auto` | `auto` (night when the sun is below the horizon or with a dark theme, even while the sun is up), `day` or `night` |
 | `show_network` | both | `true` | Download / upload rates (and WAN IP, uptime, latency, speed test on the full card) |
 | `show_history` | both | `true` | 24 h curves behind the rate tiles and the CPU / RAM / disk gauges, from the recorder's 5-minute statistics (sensors with a `state_class`): the curve breaks where the recorder has no data |
 | `show_speedtest` | full | `true` | The last speed test in the network section (download, upload and ping; its time on hover) |

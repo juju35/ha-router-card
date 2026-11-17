@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { integrations, mock } from "../scripts/mock-states.mjs";
 import { load } from "./load.mjs";
 
-const { discover, listDevices, boxFor, stateOf, onlineOf, fmtRate, toBps, bootSec, speedtestOf, kindOf, profileOf, cleanEntities, sameSig } = load("router-card.js", [
+const { discover, listDevices, boxFor, stateOf, onlineOf, fmtRate, toBps, bootSec, speedtestOf, kindOf, profileOf, cleanEntities, sameSig, rcIsNight } = load("router-card.js", [
   "discover",
   "listDevices",
   "boxFor",
@@ -19,6 +19,7 @@ const { discover, listDevices, boxFor, stateOf, onlineOf, fmtRate, toBps, bootSe
   "profileOf",
   "cleanEntities",
   "sameSig",
+  "rcIsNight",
 ]);
 // Plain copies of objects built in the card's context, for deepEqual.
 const plain = (v) => JSON.parse(JSON.stringify(v));
@@ -308,4 +309,15 @@ test("Cudy (ha-cudy-router): English names without translation keys; total rates
   assert.equal(sc.reboot, "button.wr3000_reboot");
   assert.deepEqual(plain(box.wifi.map((w) => w.id)).sort(), ["switch.wr3000_wifi_2_4g_enabled", "switch.wr3000_wifi_5g_enabled"]);
   assert.deepEqual(plain(box.nodes.map((n) => n.name)), ["Mesh Bedroom"]);
+});
+
+test("night picture: the sun below the horizon or the dark theme, even while the sun is up; illustration_theme wins", () => {
+  const h = (state, darkMode = false) => ({ states: state ? { "sun.sun": { state } } : {}, themes: { darkMode } });
+  assert.equal(rcIsNight(h("above_horizon", true), {}), true);
+  assert.equal(rcIsNight(h("above_horizon"), {}), false);
+  assert.equal(rcIsNight(h("below_horizon"), {}), true);
+  assert.equal(rcIsNight(h("unavailable", true), {}), true);
+  assert.equal(rcIsNight(h(null), {}), false);
+  assert.equal(rcIsNight(h("below_horizon", true), { illustration_theme: "day" }), false);
+  assert.equal(rcIsNight(h("above_horizon"), { illustration_theme: "night" }), true);
 });
