@@ -235,6 +235,13 @@ const KIND_ICONS = {
   ap: '<ellipse cx="12" cy="17" rx="8" ry="3"/><path class="ln" d="M8.5 9.5a5 5 0 0 1 7 0M6 7a8.5 8.5 0 0 1 12 0"/><circle cx="12" cy="12.2" r="1.3"/>',
 };
 const kindIcon = (kind) => `<svg class="icon type" viewBox="0 0 24 24" aria-hidden="true">${KIND_ICONS[kind] || KIND_ICONS.router}</svg>`;
+// The whole width of an element's text in its own font, an ellipsised one included.
+const textWidth = (el) => {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return range.getBoundingClientRect().width;
+};
+
 const svgIcon = (path, cls = "") => `<svg class="icon ${cls}" viewBox="0 0 24 24"><path d="${path}"/></svg>`;
 
 const STRINGS = {
@@ -3363,12 +3370,19 @@ const BASE_STYLE = `
   .header { display: flex; align-items: center; gap: 10px; padding: 12px 12px 8px; }
   /* The status pill sits right of the title line, centred on it; the subtitle and chips stay under the title.
      Narrow cards: the title block shrinks but keeps about 4 characters of the 16 px title (48 px), the device picture
-     gets smaller (hidden up to 340 px on the full card), the status pill truncates its text (only its dot below
-     245 px) and the icon buttons never shrink. */
+     gets smaller (hidden up to 340 px on the full card), the status pill goes under the subtitle when the whole title
+     and its whole label do not fit on one line (only its dot at 200 px or less) and the icon buttons never shrink. */
   .titles { flex: 1 1 0; min-width: 48px; display: grid; grid-template-columns: minmax(0, 1fr) auto; }
   :host([hide-title]) .titles > .name, :host([hide-subtitle]) .titles > .sub { display: none; }
   .titles > * { grid-column: 1; }
   .titles > .chip { grid-column: 2; grid-row: 1; align-self: center; margin-left: 10px; white-space: nowrap; min-width: 0; max-width: 100%; }
+  /* The whole title and the pill's whole label do not fit on the title's line (measured by the card, see _fitPill):
+     the pill goes under the subtitle. */
+  .titles.below > .chip.status { grid-column: 1; grid-row: auto; order: 1; align-self: start; justify-self: start; margin: 4px 0 0; }
+  .titles.below > .chips { order: 2; }
+  /* Even on a line of its own the whole label does not fit: its dot alone (the text stays its tooltip and label). */
+  .titles.pill-dot > .chip.status { padding: 5px; }
+  .titles.pill-dot > .chip.status .txt { display: none; }
   .chip.status { overflow: hidden; }
   .chip.status .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .titles .chips { margin-top: 4px; }
@@ -3434,27 +3448,27 @@ const BANNER_STYLE = `
   .banner.night { --rc-sky-text: #fff; --rc-sky-muted: rgba(255,255,255,.78); background: #101827; }
   .banner .htext { position: absolute; z-index: 1; left: 12px; top: 0; bottom: 10px; right: calc(min(200px, 50cqw) + 4px);
                    display: flex; align-items: center; gap: 10px; min-width: 0; }
-  /* Title, then its status pill 8 px after it, centred on it: the title ellipsises first but keeps about 4
-     characters (48 px), the pill never takes more than half of the line. The subtitle and chips go under them. */
+  /* Title, then its status pill 8 px after it and the update pill after that, centred on it, while the whole title
+     and the pills' whole labels fit on that row; otherwise (measured by the card, see _fitPill) the pills go on a line
+     of their own under a one-line subtitle (.below; .below2: the update pill alone), and when even then the text
+     would run into the ground strip, they keep their dot or icon alone (.pill-dot). */
   .banner .titles { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 1px; }
-  .banner .titles > * { flex: 1 0 100%; min-width: 0; }
-  .banner .trow { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .banner .name { flex: 0 1 auto; min-width: 48px; color: var(--rc-sky-text); }
-  .banner .chip.status { flex: 0 0 auto; margin: 0; max-width: 51%; }
+  .banner .trow { display: contents; }
+  .banner .name { flex: 0 1 auto; min-width: 0; max-width: 100%; color: var(--rc-sky-text); }
+  .banner .trow > .chip { flex: none; margin: 0; min-width: 0; max-width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+  .banner .titles > .sub { order: 5; flex: 1 0 100%; min-width: 0; }
   .banner .sub { color: var(--rc-sky-muted); max-height: 32px; line-height: 16px; }
-  /* A narrow card: the title takes its whole line, the pill goes under the subtitle (beside the chips). */
-  @container (min-width: 201px) and (max-width: 260px) {
-    .banner .trow { display: contents; }
-    .banner .titles > .sub { order: 1; max-height: 16px; }
-    .banner .titles .chip.status { order: 2; max-width: 100%; margin-top: 2px; }
-    .banner .titles > .chips { order: 3; flex: 0 1 auto; margin-top: 2px; }
-  }
-  .banner .chips .chip { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
-  @container (max-width: 260px) { .banner .sub { max-height: 16px; } }
-  /* Narrower still: only the pill's coloured dot, on the title line (its text stays its tooltip and label). */
+  .banner .titles.below > .chip, .banner .titles.below .trow > .chip, .banner .titles.below2 .trow > .chip.upd { order: 6; margin-top: 2px; }
+  .banner .titles.below > .sub, .banner .titles.below2 > .sub { max-height: 16px; }
+  .banner .titles.pill-dot .chip.status { padding: 5px; }
+  .banner .titles.pill-dot .chip .txt { display: none; }
+  .banner .titles.pill-dot .chip.upd { padding: 1px 4px; }
+  .banner .chip.upd .icon { flex: none; }
+  /* Narrower still: only the pill's coloured dot (its text stays its tooltip and label). */
   @container (max-width: 200px) {
     .banner .chip.status { padding: 5px; }
-    .banner .chip.status .txt { display: none; }
+    .banner .chip.status .txt, .banner .chip.upd .txt { display: none; }
+    .banner .chip.upd { padding: 1px 4px; }
   }
   .banner + .content { padding-top: 10px; }
   .banner .logo-link { align-self: center; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1px rgba(47,128,237,.18);
@@ -3664,10 +3678,24 @@ class RouterBase extends HTMLElement {
     this._dialogOutside.on();
     // Back on the page after leaving it: rendered again in its default state.
     this._update();
+    // A new width (or the web font loaded): the status pill is fitted again, in the next frame.
+    if (typeof ResizeObserver === "function") {
+      this._resize ??= new ResizeObserver((entries) => {
+        const w = Math.round(entries.at(-1).contentRect.width);
+        if (w === this._fitWidth) return;
+        this._fitWidth = w;
+        cancelAnimationFrame(this._fitFrame);
+        this._fitFrame = requestAnimationFrame(() => this._fitPill());
+      });
+      this._resize.observe(this);
+    }
+    document.fonts?.ready?.then(() => this._fitPill());
   }
 
   disconnectedCallback() {
     this._dialogOutside?.off();
+    this._resize?.disconnect();
+    this._fitWidth = null;
     window.removeEventListener("keydown", this._onKey);
     this._pressing = false;
     window.removeEventListener("pointerup", this._onPressEnd, true);
@@ -3930,6 +3958,44 @@ class RouterBase extends HTMLElement {
       this._html = html;
       morph(this.shadowRoot, html);
     }
+    this._fitPill();
+  }
+
+  // The status pill stays right after the title only while the whole title and the pill's whole label fit on that
+  // line, the update pill after it on the same terms; otherwise they take a line of their own under the subtitle
+  // (.below, or .below2 for the update pill alone), and when even then the line is too narrow for them or (on the
+  // banner) the text would run into the ground strip, they keep their dot or icon alone (.pill-dot). Measured
+  // in the real fonts, the pills at their natural width, so that every language and title length gets its own answer.
+  _fitPill() {
+    const natural = (chip) => {
+      chip.style.width = "max-content";
+      chip.style.maxWidth = "none";
+      const w = chip.getBoundingClientRect().width;
+      chip.style.width = "";
+      chip.style.maxWidth = "";
+      return w;
+    };
+    for (const t of this.shadowRoot?.querySelectorAll?.(".titles") || []) {
+      const status = t.querySelector(".chip.status");
+      if (!status?.getBoundingClientRect) continue;
+      t.classList.remove("below", "below2", "pill-dot");
+      const banner = t.closest(".banner");
+      const upd = banner && t.querySelector(".trow > .chip.upd");
+      const name = t.querySelector(".name");
+      const gap = banner ? parseFloat(getComputedStyle(t).columnGap) || 0 : parseFloat(getComputedStyle(status).marginLeft) || 0;
+      const room = t.getBoundingClientRect().width;
+      const title = name && getComputedStyle(name).display !== "none" ? textWidth(name) + gap : 0;
+      const pill = natural(status);
+      const second = upd ? natural(upd) + gap : 0;
+      if (title + pill > room) t.classList.add("below");
+      else if (title + pill + second > room) t.classList.add("below2");
+      else continue;
+      const line = t.classList.contains("below") ? pill + second : second - gap;
+      const r = t.getBoundingClientRect();
+      const box = banner?.getBoundingClientRect();
+      const floor = banner?.querySelector(".rc-ground")?.getBoundingClientRect().top ?? box?.bottom;
+      if ((box && (r.bottom > floor + 0.5 || r.top < box.top - 0.5)) || line > room + 0.5) t.classList.add("pill-dot");
+    }
   }
 
   // State of the internet link (WAN): { entity, cls, key }, or null when the router exposes nothing about it.
@@ -3955,11 +4021,18 @@ class RouterBase extends HTMLElement {
 
   // Info chips under the title: a firmware update waiting.
   _chips(box) {
+    const up = this._updatePill(box);
+    return up ? `<div class="chips">${up}</div>` : "";
+  }
+
+  // The firmware update pill (its text also its tooltip), or "" when no update is waiting.
+  _updatePill(box) {
     const up = this._s(box.scalars.update);
     if (up?.state !== "on") return "";
-    return `<div class="chips"><span class="chip warn clickable" role="button" tabindex="0" data-entity="${up.entity_id}">${svgIcon(ICONS.update)}${esc(
-      this._t("update_available")
-    )}</span></div>`;
+    const text = esc(this._t("update_available"));
+    return `<span class="chip warn upd clickable" role="button" tabindex="0" data-entity="${up.entity_id}" title="${text}" aria-label="${text}">${svgIcon(
+      ICONS.update
+    )}<span class="txt">${text}</span></span>`;
   }
 
   _header(box, full) {
@@ -4037,9 +4110,8 @@ class RouterBase extends HTMLElement {
         <div class="htext">
           ${c.show_logo !== false ? brand : ""}
           <div class="titles">
-            <div class="trow"><div class="name">${esc(name)}</div>${this._statusPill(box, true)}</div>
-            <div class="sub"><div class="parts">${parts.join("")}</div></div>
-            ${full ? this._chips(box) : ""}
+            <div class="trow"><div class="name">${esc(name)}</div>${this._statusPill(box, true)}${full ? this._updatePill(box) : ""}</div>
+            <div class="sub" title="${parts.join(" · ").replace(/<[^>]*>/g, "")}"><div class="parts">${parts.join("")}</div></div>
           </div>
         </div>
         ${nb ? `<div class="hbtns">${btns}</div>` : ""}
@@ -4120,19 +4192,10 @@ const FULL_STYLE = `
   @container (max-width: 460px) { .pic { height: 38px; } }
   @container (max-width: 380px) { .pic { height: 32px; } }
   @container (max-width: 340px) { .pic-link { display: none; } }
-  /* On a narrow full card the status pill would squeeze the title on its line; move it below the title. */
-  @container (max-width: 440px) {
-    .titles > .chip.status { grid-column: 1; grid-row: auto; align-self: start; justify-self: start; margin: 4px 0 0; }
-  }
-  /* Narrower still: only the pill's coloured dot, back on the title line (its text stays its tooltip and label). */
-  @container (max-width: 244px) {
-    .titles > .chip.status { grid-column: 2; grid-row: 1; align-self: center; justify-self: end; margin: 0 0 0 6px; padding: 5px; }
-    .header:not(.banner) .chip.status .txt { display: none; }
-  }
-  /* At 6 columns of a narrow section: the dot goes to the subtitle line, the title takes the whole first line. */
+  /* Only the pill's coloured dot on a card of 200 px or less (its text stays its tooltip and label). */
   @container (max-width: 200px) {
-    .titles > .name { grid-column: 1 / -1; }
-    .titles > .chip.status { grid-row: 2; }
+    .header:not(.banner) .chip.status { padding: 5px; }
+    .header:not(.banner) .chip.status .txt { display: none; }
     /* The zoomed mini card has both the restart and the detail buttons: the logo gives them its place. */
     .header:has(.zoom) .logo-link { display: none; }
   }
@@ -4343,10 +4406,7 @@ class RouterCard extends RouterBase {
 
 const MINI_STYLE = `
   :host::before { grid-template-columns: minmax(0, 240px); }
-  /* Classic header: the status pill moves under the title when it would squeeze it, then shows only its dot. */
-  @container (max-width: 400px) {
-    .titles > .chip.status { grid-column: 1; grid-row: auto; align-self: start; justify-self: start; margin: 4px 0 0; }
-  }
+  /* Classic header: only the status pill's dot on a card of 200 px or less. */
   @container (max-width: 200px) { .chip.status { padding: 5px; } .chip.status .txt { display: none; } }
   .pic-link { max-width: 35%; }
   .pic { height: 44px; }
