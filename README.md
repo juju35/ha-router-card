@@ -271,6 +271,14 @@ After a click on the detail button, the mini card shows the full card in its pla
 |---|---|
 | <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/mini-card-zoom.png" alt="router-mini-card zoomed" width="400"> | <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/mini-card-zoom-dark.png" alt="router-mini-card zoomed dark" width="400"> |
 
+### Animated captures
+
+WAN up, the WAN cable flows into the device, packets travel to the connected clients and the Wi-Fi waves blink (WAN down or unavailable, the scene stands still; animations stop with reduced motion):
+
+| Light | Dark |
+|---|---|
+| <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/header-online.gif" alt="animated header, WAN up" width="400"> | <img src="https://raw.githubusercontent.com/juju35/ha-router-card/main/screenshots/header-online-dark.gif" alt="animated header, WAN up, dark" width="400"> |
+
 ### Drawings
 
 | Firewall | Router | Mesh unit | Access point |
