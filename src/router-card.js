@@ -3433,10 +3433,28 @@ const BANNER_STYLE = `
   .banner.night { --rc-sky-text: #fff; --rc-sky-muted: rgba(255,255,255,.78); background: #101827; }
   .banner .htext { position: absolute; z-index: 1; left: 12px; top: 0; bottom: 10px; right: calc(min(200px, 50cqw) + 4px);
                    display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .banner .titles { display: flex; flex-direction: column; gap: 1px; }
-  .banner .name { color: var(--rc-sky-text); }
+  /* Title, then its status pill 8 px after it, centred on it: the title ellipsises first but keeps about 4
+     characters (48 px), the pill never takes more than half of the line. The subtitle and chips go under them. */
+  .banner .titles { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 1px; }
+  .banner .titles > * { flex: 1 0 100%; min-width: 0; }
+  .banner .trow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .banner .name { flex: 0 1 auto; min-width: 48px; color: var(--rc-sky-text); }
+  .banner .chip.status { flex: 0 0 auto; margin: 0; max-width: 51%; }
   .banner .sub { color: var(--rc-sky-muted); max-height: 32px; line-height: 16px; }
-  .banner .sub .st .dot { margin: 0 4px 1px 0; vertical-align: middle; }
+  /* A narrow card: the title takes its whole line, the pill goes under the subtitle (beside the chips). */
+  @container (min-width: 201px) and (max-width: 260px) {
+    .banner .trow { display: contents; }
+    .banner .titles > .sub { order: 1; max-height: 16px; }
+    .banner .titles .chip.status { order: 2; max-width: 100%; margin-top: 2px; }
+    .banner .titles > .chips { order: 3; flex: 0 1 auto; margin-top: 2px; }
+  }
+  .banner .chips .chip { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+  @container (max-width: 260px) { .banner .sub { max-height: 16px; } }
+  /* Narrower still: only the pill's coloured dot, on the title line (its text stays its tooltip and label). */
+  @container (max-width: 200px) {
+    .banner .chip.status { padding: 5px; }
+    .banner .chip.status .txt { display: none; }
+  }
   .banner + .content { padding-top: 10px; }
   .banner .logo-link { align-self: center; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1px rgba(47,128,237,.18);
                        --rc-icon: color-mix(in srgb, var(--rc-tint) 78%, #0d2a45); }
@@ -3445,13 +3463,26 @@ const BANNER_STYLE = `
   .banner .logo-link .icon.type .led { fill: rgba(255,255,255,.85); }
   .banner.night .logo-link .icon.type .led { fill: #101827; }
   .banner .logo { box-shadow: 0 0 0 1px rgba(13,42,69,.16), 0 1px 3px rgba(13,42,69,.18); }
-  .banner .action, .banner .zoom { margin: 0; color: var(--rc-sky-text); background: rgba(255,255,255,.55); }
-  .banner.night .action, .banner.night .zoom { background: rgba(255,255,255,.12); }
+  /* Header buttons on one line in the top right corner of the banner: the detail button of the mini card in the
+     corner, the restart button 4 px to its left; round, frosted, over the scene. */
+  .banner .hbtns { position: absolute; z-index: 2; top: 5px; right: 5px; display: flex; flex-direction: row-reverse; gap: 4px; }
+  .banner .action, .banner .zoom { margin: 0; color: #33506b; background: rgba(255,255,255,.55);
+                                   box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); backdrop-filter: blur(4px); }
+  .banner .action:hover, .banner .zoom:hover { background: rgba(255,255,255,.75); color: #33506b; }
+  .banner.night .action, .banner.night .zoom { color: #fff; background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+  .banner.night .action:hover, .banner.night .zoom:hover { background: rgba(255,255,255,.22); color: #fff; }
   .banner .chips { margin-top: 2px; }
-  .banner .chip { background: rgba(255,255,255,.7); }
-  .banner.night .chip { background: rgba(10,20,40,.5); color: color-mix(in srgb, var(--c) 45%, #fff); }
+  /* Pills on the sky: a frosted glass under the tint of the state colour. */
+  .banner .chip { background: color-mix(in srgb, var(--c, var(--rc-ok)) 18%, rgba(255,255,255,.78));
+                  color: color-mix(in srgb, var(--c, var(--rc-ok)) 45%, #0d2a45); }
+  .banner.night .chip { background: color-mix(in srgb, var(--c, var(--rc-ok)) 30%, rgba(8,18,38,.55));
+                        color: color-mix(in srgb, var(--c, var(--rc-ok)) 35%, #fff); }
+  .banner .chip .dot { width: 7px; height: 7px; }
   .rc-scene { position: absolute; right: 0; bottom: 10px; height: 80px; width: min(200px, 50cqw); }
-  @container (max-width: 230px) { .rc-scene { display: none; } .banner .htext { right: 12px; } }
+  /* A card under 340 px: a smaller scene, so the title and its pill keep their line. */
+  @container (max-width: 340px) { .rc-scene { width: 36cqw; } .banner .htext { right: calc(36cqw + 4px); } }
+  /* No scene: the text ends before the header buttons. */
+  @container (max-width: 230px) { .rc-scene { display: none; } .banner .htext { right: calc(8px + var(--rc-nb, 0) * 28px); } }
   .rc-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; }
   .g-net { background: #1e3a5f; background-image: repeating-linear-gradient(90deg, #4fc3f7 0 14px, transparent 14px 22px);
            background-size: 100% 2px; background-repeat: no-repeat; background-position: 0 50%; box-shadow: inset 0 2px 0 #2f5a8a; }
@@ -3910,14 +3941,15 @@ class RouterBase extends HTMLElement {
   }
 
   // Status pill right of the title (WAN state), or "" when the router exposes no WAN state.
-  _statusPill(box) {
+  // On the illustrated header the pill shows the short state ("Online"), its tooltip and accessible name keep "WAN".
+  _statusPill(box, short = false) {
     const link = this._link(box);
     if (!link) return "";
     const text = `${this._t("wan")} · ${this._t(link.key)}`;
     // The text is also the tooltip and accessible name: on a narrow card only the coloured dot is shown.
     return `<span class="chip status clickable ${link.cls}" role="button" tabindex="0" data-entity="${link.entity}" title="${esc(text)}" aria-label="${esc(
       text
-    )}"><span class="dot"></span><span class="txt">${esc(text)}</span></span>`;
+    )}"><span class="dot"></span><span class="txt">${esc(short ? this._t(link.key) : text)}</span></span>`;
   }
 
   // Info chips under the title: a firmware update waiting.
@@ -3958,7 +3990,7 @@ class RouterBase extends HTMLElement {
         ${c.show_logo !== false ? brand : ""}
         <div class="titles">
           <div class="name">${esc(name)}</div>
-          ${full ? this._statusPill(box) : ""}
+          ${this._statusPill(box)}
           <div class="sub"><div class="parts">${sub.map((x) => `<span>${esc(x)}</span>`).join("")}</div></div>
           ${full ? this._chips(box) : ""}
         </div>
@@ -3974,17 +4006,12 @@ class RouterBase extends HTMLElement {
       </div>`;
   }
 
-  // Illustrated header: the icon, title and subtitle on the left (the subtitle starts with the WAN state and the
-  // clients connected), the network scene on the right, the ground strip at the bottom; the restart and detail
-  // buttons at the end of the text.
+  // Illustrated header: the icon, title and its WAN status pill, then the subtitle (clients connected, model,
+  // firmware) on the left, the network scene on the right, the ground strip at the bottom; the detail and restart
+  // buttons in the top right corner of the banner.
   _banner(box, full, { name, model, firmware, brand, pic, adminUrl, state }) {
     const c = this._config;
-    const link = this._link(box);
     const parts = [];
-    if (link)
-      parts.push(
-        `<span class="st clickable ${link.cls}" role="button" tabindex="0" data-entity="${link.entity}" title="${esc(this._t("wan"))}"><span class="dot"></span>${esc(this._t(link.key))}</span>`
-      );
     const cl = this._clients(box);
     if (cl && cl.n !== null) parts.push(`<span>${cl.n} ${esc(this._tn("clients_n", cl.n))}</span>`);
     if (model) parts.push(`<span>${esc(model)}</span>`);
@@ -4000,20 +4027,21 @@ class RouterBase extends HTMLElement {
       href: adminUrl,
       label: this._t("admin"),
     });
+    const btns = `${this._headerEnd()}${full ? this._restartBtn(box) : ""}`;
+    const nb = (btns.match(/<button/g) || []).length;
     return `
-      <div class="header banner${night ? " night" : ""}">
+      <div class="header banner${night ? " night" : ""}" style="--rc-nb:${nb}">
         ${svg}
         <div class="rc-ground ${scene === "down" ? "g-netdown" : "g-net"}"></div>
         <div class="htext">
           ${c.show_logo !== false ? brand : ""}
           <div class="titles">
-            <div class="name">${esc(name)}</div>
+            <div class="trow"><div class="name">${esc(name)}</div>${this._statusPill(box, true)}</div>
             <div class="sub"><div class="parts">${parts.join("")}</div></div>
             ${full ? this._chips(box) : ""}
           </div>
-          ${full ? this._restartBtn(box) : ""}
-          ${this._headerEnd()}
         </div>
+        ${nb ? `<div class="hbtns">${btns}</div>` : ""}
       </div>`;
   }
 
@@ -4097,7 +4125,7 @@ const FULL_STYLE = `
   /* Narrower still: only the pill's coloured dot, back on the title line (its text stays its tooltip and label). */
   @container (max-width: 244px) {
     .titles > .chip.status { grid-column: 2; grid-row: 1; align-self: center; justify-self: end; margin: 0 0 0 6px; padding: 5px; }
-    .chip.status .txt { display: none; }
+    .header:not(.banner) .chip.status .txt { display: none; }
   }
   /* At 6 columns of a narrow section: the dot goes to the subtitle line, the title takes the whole first line. */
   @container (max-width: 200px) {
@@ -4313,6 +4341,11 @@ class RouterCard extends RouterBase {
 
 const MINI_STYLE = `
   :host::before { grid-template-columns: minmax(0, 240px); }
+  /* Classic header: the status pill moves under the title when it would squeeze it, then shows only its dot. */
+  @container (max-width: 400px) {
+    .titles > .chip.status { grid-column: 1; grid-row: auto; align-self: start; justify-self: start; margin: 4px 0 0; }
+  }
+  @container (max-width: 200px) { .chip.status { padding: 5px; } .chip.status .txt { display: none; } }
   .pic-link { max-width: 35%; }
   .pic { height: 44px; }
   @container (max-width: 260px) { .pic { height: 28px; } }

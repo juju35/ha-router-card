@@ -179,3 +179,67 @@ test("a Wi-Fi network goes off and the router restarts only once confirmed; Wi-F
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+test("status pill: whole label after the title on its line, under the subtitle on a narrow card, only its dot below 200 px", async (t) => {
+  if (skip) return t.skip(skip);
+  for (const type of ["router-card", "router-mini-card"])
+    for (const zoom of type === "router-mini-card" ? [false, true] : [false])
+      for (const width of [180, 245, 300, 400, 500]) {
+        const { page, errors } = await open(type, integrations.unifi, { width });
+        if (zoom) await page.evaluate(() => window.click(window.card.shadowRoot.querySelector(".zoom")));
+        const r = await page.evaluate(() => {
+          const root = window.card.shadowRoot;
+          const box = (n) => n.getBoundingClientRect();
+          const pill = root.querySelector(".banner .chip.status");
+          const txt = pill.querySelector(".txt");
+          const name = box(root.querySelector(".banner .name"));
+          const sub = box(root.querySelector(".banner .sub"));
+          const p = box(pill);
+          return {
+            label: pill.getAttribute("aria-label"),
+            textShown: getComputedStyle(txt).display !== "none",
+            whole: txt.scrollWidth <= txt.clientWidth + 1,
+            sameLine: Math.abs(p.top + p.height / 2 - (name.top + name.height / 2)) <= 2,
+            gap: p.left - name.right,
+            under: p.top >= sub.bottom - 1,
+            share: p.width / box(root.querySelector(".banner .titles")).width,
+            titleWidth: name.width,
+          };
+        });
+        const at = `${type}${zoom ? " zoomed" : ""} ${width}px`;
+        assert.deepEqual(errors, [], at);
+        assert.equal(r.label, "WAN · Online", at);
+        assert.ok(r.titleWidth >= 30, `${at}: title squeezed to ${r.titleWidth}px`);
+        if (width <= 200) assert.equal(r.textShown, false, `${at}: only the dot`);
+        else {
+          assert.ok(r.textShown && r.whole, `${at}: the whole label`);
+          if (width <= 260) assert.ok(r.under, `${at}: pill under the subtitle`);
+          else {
+            assert.ok(r.sameLine, `${at}: pill centred on the title line`);
+            assert.ok(r.gap >= 7 && r.gap <= 11, `${at}: ${r.gap}px between the title and the pill`);
+            assert.ok(r.share <= 0.52, `${at}: pill takes ${Math.round(r.share * 100)} % of the title block`);
+          }
+        }
+        await page.close();
+      }
+});
+
+test("header buttons: the detail button in the banner's top right corner, the restart button on its left", async (t) => {
+  if (skip) return t.skip(skip);
+  for (const zoom of [false, true])
+    for (const width of [245, 300, 400]) {
+      const { page } = await open("router-mini-card", integrations.unifi, { width });
+      if (zoom) await page.evaluate(() => window.click(window.card.shadowRoot.querySelector(".zoom")));
+      const r = await page.evaluate(() => {
+        const root = window.card.shadowRoot;
+        const b = root.querySelector(".banner").getBoundingClientRect();
+        const z = root.querySelector(".zoom").getBoundingClientRect();
+        const a = root.querySelector(".banner .action")?.getBoundingClientRect();
+        return { top: z.top - b.top, right: b.right - z.right, w: z.width, h: z.height, a: a && { top: a.top - b.top, gap: z.left - a.right } };
+      });
+      const at = `${zoom ? "zoomed" : "compact"} ${width}px`;
+      assert.deepEqual([r.top, r.right, r.w, r.h], [5, 5, 24, 24], at);
+      if (zoom) assert.deepEqual([r.a.top, r.a.gap], [5, 4], `${at}: restart button`);
+      await page.close();
+    }
+});
