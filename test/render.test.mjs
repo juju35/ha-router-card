@@ -234,22 +234,30 @@ test("status pill: beside a whole title or under the subtitle, label whole or do
           const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
           const hass = window.card.hass;
           const res = [];
+          for (const classic of [false, true])
           for (const language of ["en", "fr", "de", "hu", "el", "ru"])
             for (const width of [190, 245, 300, 400, 460, 500])
               for (const title of [undefined, "Dream Machine Pro Max Living room"]) {
                 const root = document.getElementById("root");
                 root.style.width = `${width}px`;
                 const el = document.createElement(type);
-                el.setConfig({ type: `custom:${type}`, language, ...(title ? { title } : {}) });
+                el.setConfig({ type: `custom:${type}`, language, ...(title ? { title } : {}), ...(classic ? { illustration: false } : {}) });
                 el.hass = { ...hass, language, locale: { language } };
                 root.replaceChildren(el);
                 if (zoom) window.click(el.shadowRoot.querySelector(".zoom"));
                 await frame();
                 await frame();
-                const what = `${type}${zoom ? " zoomed" : ""} ${language} ${width}px${title ? " long title" : ""}`;
-                const pills = ".banner .chip.status, .banner .trow > .chip.upd";
+                const what = `${type}${classic ? " classic" : ""}${zoom ? " zoomed" : ""} ${language} ${width}px${title ? " long title" : ""}`;
+                const pills = classic ? ".header .chip.status" : ".banner .chip.status, .banner .trow > .chip.upd";
+                if (classic) {
+                  // The classic header: the pill right after the title (8 px) when it shares its line.
+                  const p = el.shadowRoot.querySelector(".header .chip.status").getBoundingClientRect();
+                  const n = el.shadowRoot.querySelector(".header .name").getBoundingClientRect();
+                  if (Math.abs(p.top + p.height / 2 - (n.top + n.height / 2)) < n.height / 2 && Math.abs(p.left - n.right - 8) > 1)
+                    res.push(`${what}: pill ${Math.round(p.left - n.right)}px after the title`);
+                }
                 for (const f of pillAudit(el.shadowRoot, width, pills, ".name", ".rc-ground")) res.push(`${what}: ${f}`);
-                const p = el.shadowRoot.querySelector(".banner .chip.status");
+                const p = el.shadowRoot.querySelector(".chip.status");
                 if (p.getAttribute("aria-label") !== { en: "WAN · Online" }[language] && language === "en") res.push(`${what}: label ${p.getAttribute("aria-label")}`);
               }
           return res;

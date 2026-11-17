@@ -3368,21 +3368,22 @@ const BASE_STYLE = `
   .toggle:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .toggle::after { transition: none; } }
   .header { display: flex; align-items: center; gap: 10px; padding: 12px 12px 8px; }
-  /* The status pill sits right of the title line, centred on it; the subtitle and chips stay under the title.
-     Narrow cards: the title block shrinks but keeps about 4 characters of the 16 px title (48 px), the device picture
-     gets smaller (hidden up to 340 px on the full card), the status pill goes under the subtitle when the whole title
-     and its whole label do not fit on one line (only its dot at 200 px or less) and the icon buttons never shrink. */
-  .titles { flex: 1 1 0; min-width: 48px; display: grid; grid-template-columns: minmax(0, 1fr) auto; }
-  :host([hide-title]) .titles > .name, :host([hide-subtitle]) .titles > .sub { display: none; }
-  .titles > * { grid-column: 1; }
-  .titles > .chip { grid-column: 2; grid-row: 1; align-self: center; margin-left: 10px; white-space: nowrap; min-width: 0; max-width: 100%; }
-  /* The whole title and the pill's whole label do not fit on the title's line (measured by the card, see _fitPill):
-     the pill goes under the subtitle. */
-  .titles.below > .chip.status { grid-column: 1; grid-row: auto; order: 1; align-self: start; justify-self: start; margin: 4px 0 0; }
-  .titles.below > .chips { order: 2; }
+  /* The status pill right after the title (8 px), centred on it; the subtitle and chips under them. Narrow cards: the
+     device picture gets smaller (hidden up to 340 px on the full card), the status pill goes under the subtitle when
+     the whole title and its whole label do not fit on one line (measured by the card, see _fitPill; only its dot at
+     200 px or less) and the icon buttons never shrink. */
+  .titles { flex: 1 1 0; min-width: 48px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+  :host([hide-title]) .titles .name, :host([hide-subtitle]) .titles > .sub { display: none; }
+  .titles > * { flex: 1 0 100%; min-width: 0; }
+  .trow { display: contents; }
+  .trow > .name { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  .trow > .chip.status { flex: none; white-space: nowrap; min-width: 0; max-width: 100%; }
+  .titles > .sub { order: 5; }
+  .titles > .chips { order: 7; }
+  .titles.below .trow > .chip.status { order: 6; margin-top: 4px; }
   /* Even on a line of its own the whole label does not fit: its dot alone (the text stays its tooltip and label). */
-  .titles.pill-dot > .chip.status { padding: 5px; }
-  .titles.pill-dot > .chip.status .txt { display: none; }
+  .titles.pill-dot .chip.status { padding: 5px; }
+  .titles.pill-dot .chip.status .txt { display: none; }
   .chip.status { overflow: hidden; }
   .chip.status .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .titles .chips { margin-top: 4px; }
@@ -3982,7 +3983,7 @@ class RouterBase extends HTMLElement {
       const banner = t.closest(".banner");
       const upd = banner && t.querySelector(".trow > .chip.upd");
       const name = t.querySelector(".name");
-      const gap = banner ? parseFloat(getComputedStyle(t).columnGap) || 0 : parseFloat(getComputedStyle(status).marginLeft) || 0;
+      const gap = parseFloat(getComputedStyle(t).columnGap) || 0;
       const room = t.getBoundingClientRect().width;
       const title = name && getComputedStyle(name).display !== "none" ? textWidth(name) + gap : 0;
       const pill = natural(status);
@@ -4063,8 +4064,7 @@ class RouterBase extends HTMLElement {
       <div class="header">
         ${c.show_logo !== false ? brand : ""}
         <div class="titles">
-          <div class="name">${esc(name)}</div>
-          ${this._statusPill(box)}
+          <div class="trow"><div class="name">${esc(name)}</div>${this._statusPill(box)}</div>
           <div class="sub"><div class="parts">${sub.map((x) => `<span>${esc(x)}</span>`).join("")}</div></div>
           ${full ? this._chips(box) : ""}
         </div>
