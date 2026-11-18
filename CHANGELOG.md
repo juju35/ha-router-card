@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0 - 2026-11-18
+
+### Features
+- **MikroTik Extended** ([#14](https://github.com/juju35/ha-router-card/issues/14), requested by @MackoMici): the [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) integration (`mikrotik_extended`, custom), a fork of MikroTik Router, is supported with the MikroTik logo — CPU, memory, disk, temperatures, fans, uptime, clients and firmware update on the router, the rates and connection of the WAN interface from its interface device; its interfaces, routes, WireGuard peers and LTE modem are not listed as network devices.
+
 ## 1.2.1 - 2026-11-18
 
 ### Fixes
