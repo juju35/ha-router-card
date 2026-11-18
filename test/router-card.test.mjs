@@ -145,6 +145,37 @@ test("MikroTik: rates on the interface devices, the WAN one first; interfaces ar
   assert.deepEqual(plain(listDevices(hass).map((d) => d.value)), ["rb"]);
 });
 
+test("MikroTik Extended: same discovery as MikroTik Router; routes and WireGuard peers are not the WAN", () => {
+  const hass = mock(
+    "mikrotik_extended",
+    {
+      rb: { name: "Mikrotik hEX S", model: "RB760iGS", sw_version: "7.20" },
+      e1: { name: "Mikrotik ether1-WAN", via: "rb" },
+      e2: { name: "Mikrotik ether2", via: "rb" },
+      wg: { name: "Mikrotik WireGuard", via: "rb" },
+    },
+    [
+      ["sensor.mikrotik_hex_s_cpu_load", "rb", "system_cpu_load", "7", pct],
+      ["sensor.mikrotik_hex_s_memory_usage", "rb", "system_memory_usage", "34", pct],
+      ["sensor.mikrotik_hex_s_uptime", "rb", "system_uptime", "2026-11-01T10:00:00+00:00", { device_class: "timestamp" }],
+      ["sensor.mikrotik_ether2_tx", "e2", "traffic_tx", "800", rate("B/s")],
+      ["sensor.mikrotik_ether2_rx", "e2", "traffic_rx", "100", rate("B/s")],
+      ["sensor.mikrotik_ether1_wan_tx", "e1", "traffic_tx", "1200", rate("B/s")],
+      ["sensor.mikrotik_ether1_wan_rx", "e1", "traffic_rx", "98000", rate("B/s")],
+      ["binary_sensor.mikrotik_ether1_wan_connection", "e1", "interface_connection", "on", { device_class: "connectivity" }],
+      ["binary_sensor.mikrotik_wireguard_peer_connected", "wg", "wireguard_peer", "off", { device_class: "connectivity" }],
+    ]
+  );
+  const box = discover(hass, "rb", {});
+  assert.equal(box.profile.name, "MikroTik");
+  assert.equal(box.scalars.cpu, "sensor.mikrotik_hex_s_cpu_load");
+  assert.equal(box.scalars.rate_down, "sensor.mikrotik_ether1_wan_rx");
+  assert.equal(box.scalars.rate_up, "sensor.mikrotik_ether1_wan_tx");
+  assert.equal(box.scalars.wan, "binary_sensor.mikrotik_ether1_wan_connection");
+  assert.equal(box.nodes.length, 0);
+  assert.deepEqual(plain(listDevices(hass).map((d) => d.value)), ["rb"]);
+});
+
 test("Linksys Velop and NETGEAR: the integration's own keys win (WAN status, speed test bandwidth)", () => {
   const velop = mock(
     "linksys_velop",

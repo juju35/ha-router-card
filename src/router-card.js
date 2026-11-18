@@ -2596,6 +2596,10 @@ const PROFILES = {
     name: "MikroTik", kind: "router", color: "#5b6b75", logo: "__IMG_FILE:mikrotik.svg__",
     website: "https://mikrotik.com", admin: null, nodes: false,
   },
+  mikrotik_extended: {
+    name: "MikroTik", kind: "router", color: "#5b6b75", logo: "__IMG_FILE:mikrotik.svg__",
+    website: "https://mikrotik.com", admin: null, nodes: false,
+  },
   mikrotik: {
     name: "MikroTik", kind: "router", color: "#5b6b75", logo: "__IMG_FILE:mikrotik.svg__",
     website: "https://mikrotik.com", admin: null, nodes: false,
