@@ -3701,6 +3701,7 @@ class RouterBase extends HTMLElement {
     this._dialogOutside?.off();
     this._resize?.disconnect();
     this._fitWidth = null;
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(this._fitFrame);
     window.removeEventListener("keydown", this._onKey);
     this._pressing = false;
     window.removeEventListener("pointerup", this._onPressEnd, true);
@@ -3884,7 +3885,7 @@ class RouterBase extends HTMLElement {
   // Download / upload rate tile, shared by the full and the mini card.
   _rateTile(id, cls, icon, k, hist) {
     // A tile without its sensor opens no more-info: not focusable.
-    const attrs = id ? `clickable ${cls}" role="button" tabindex="0" data-entity="${refId(id)}"` : `${cls}"`;
+    const attrs = id ? `clickable ${cls}" role="button" tabindex="0" data-entity="${esc(refId(id))}"` : `${cls}"`;
     return `<div class="tile ${attrs}>${spark(hist?.[id], hist?.end)}${svgIcon(icon)}<div><div class="k">${k}</div><div class="v">${this._rate(
       id
     )}</div></div></div>`;
@@ -4019,7 +4020,7 @@ class RouterBase extends HTMLElement {
     if (!link) return "";
     const text = `${this._t("wan")} · ${this._t(link.key)}`;
     // The text is also the tooltip and accessible name: on a narrow card only the coloured dot is shown.
-    return `<span class="chip status clickable ${link.cls}" role="button" tabindex="0" data-entity="${link.entity}" title="${esc(text)}" aria-label="${esc(
+    return `<span class="chip status clickable ${link.cls}" role="button" tabindex="0" data-entity="${esc(link.entity)}" title="${esc(text)}" aria-label="${esc(
       text
     )}"><span class="dot"></span><span class="txt">${esc(short ? this._t(link.key) : text)}</span></span>`;
   }
@@ -4035,7 +4036,7 @@ class RouterBase extends HTMLElement {
     const up = this._s(box.scalars.update);
     if (up?.state !== "on") return "";
     const text = esc(this._t("update_available"));
-    return `<span class="chip warn upd clickable" role="button" tabindex="0" data-entity="${up.entity_id}" title="${text}" aria-label="${text}">${svgIcon(
+    return `<span class="chip warn upd clickable" role="button" tabindex="0" data-entity="${esc(up.entity_id)}" title="${text}" aria-label="${text}">${svgIcon(
       ICONS.update
     )}<span class="txt">${text}</span></span>`;
   }
@@ -4250,14 +4251,14 @@ class RouterCard extends RouterBase {
     const ip6 = this._s(sc.ip6);
     if (ip4 && !noValue(ip4))
       facts.push(
-        `<span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.ip)}" title="${esc(ip6 && !noValue(ip6) ? ip6.state : "")}">${svgIcon(
+        `<span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.ip))}" title="${esc(ip6 && !noValue(ip6) ? ip6.state : "")}">${svgIcon(
           ICONS.ip
         )}${esc(ip4.state)}</span>`
       );
     const up = this._uptime(box);
     if (up !== null)
       facts.push(
-        `<span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.boot)}">${svgIcon(ICONS.timer)}${this._t("uptime")} ${fmtUptime(
+        `<span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.boot))}">${svgIcon(ICONS.timer)}${this._t("uptime")} ${fmtUptime(
           up,
           this._hass,
           this._config
@@ -4270,7 +4271,7 @@ class RouterCard extends RouterBase {
         .filter(Boolean)
         .join(" · ");
       facts.push(
-        `<span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.latency || sc.loss)}" title="${esc(this._t("latency"))}">${svgIcon(ICONS.network)}${esc(text)}</span>`
+        `<span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.latency || sc.loss))}" title="${esc(this._t("latency"))}">${svgIcon(ICONS.network)}${esc(text)}</span>`
       );
     }
     const sp = this._config.show_speedtest !== false ? speedtestOf(this._hass, box, this._config) : null;
@@ -4285,7 +4286,7 @@ class RouterCard extends RouterBase {
       ].filter(Boolean);
       const when = (dl || ul)?.last_changed;
       facts.push(
-        `<span class="clickable speedtest" role="button" tabindex="0" data-entity="${sp.download || sp.upload}" title="${esc(
+        `<span class="clickable speedtest" role="button" tabindex="0" data-entity="${esc(sp.download || sp.upload)}" title="${esc(
           `${this._t("speedtest")}${when ? ` · ${new Date(when).toLocaleString(numLang(this._hass, this._config))}` : ""}`
         )}">${svgIcon(ICONS.speedtest)}${esc(spParts.join(" · "))}</span>`
       );
@@ -4301,7 +4302,7 @@ class RouterCard extends RouterBase {
   // A ring gauge with its 24 h curve (percentages only) behind it.
   _gauge(ref, pct, text, label, cls, hist, title) {
     const id = refId(ref);
-    return `<div class="gauge clickable ${cls}" role="button" tabindex="0" data-key="${esc(ref)}" data-entity="${id}" title="${esc(title || label)}">
+    return `<div class="gauge clickable ${cls}" role="button" tabindex="0" data-key="${esc(ref)}" data-entity="${esc(id)}" title="${esc(title || label)}">
         ${hist ? spark(hist[ref], hist.end, 100) : ""}
         ${ring(pct)}
         <div class="val"><b>${text}</b></div>
@@ -4329,14 +4330,14 @@ class RouterCard extends RouterBase {
     }
     const fans = box.fans.map(({ id, name }) => {
       const rpm = num(this._s(id));
-      return `<div class="tile clickable" role="button" tabindex="0" data-key="${id}" data-entity="${id}">${svgIcon(ICONS.fan, rpm ? "spin" : "")}<div><div class="k">${esc(
+      return `<div class="tile clickable" role="button" tabindex="0" data-key="${id}" data-entity="${esc(id)}">${svgIcon(ICONS.fan, rpm ? "spin" : "")}<div><div class="k">${esc(
         name
       )}</div><div class="v">${rpm === null ? "—" : `${Math.round(rpm)} ${this._t("rpm")}`}</div></div></div>`;
     });
     const load = num(this._s(sc.load));
     const facts =
       load !== null
-        ? `<div class="facts"><span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.load)}">${svgIcon(ICONS.chip)}${this._t("load")} ${fmtNum(
+        ? `<div class="facts"><span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.load))}">${svgIcon(ICONS.chip)}${this._t("load")} ${fmtNum(
             load,
             this._hass,
             this._config,
@@ -4361,7 +4362,7 @@ class RouterCard extends RouterBase {
       const cls = !n.online ? "" : on === true ? "ok" : on === false ? "crit" : "off";
       const clients = num(this._s(n.clients));
       const state = n.online ? `<span class="chip ${cls}">${esc(this._t(on === true ? "online" : on === false ? "offline" : noValue(s) ? "unavailable" : "unknown"))}</span>` : "";
-      return `<div class="node clickable" role="button" tabindex="0" data-key="${esc(n.id)}" data-entity="${refId(n.entity)}">
+      return `<div class="node clickable" role="button" tabindex="0" data-key="${esc(n.id)}" data-entity="${esc(refId(n.entity))}">
         <span class="dot ${cls || "off"}"></span><span class="grow">${esc(n.name || n.model)}${n.main ? ` <span class="muted">· ${esc(this._t("main"))}</span>` : ""}</span>
         ${n.model && n.model !== n.name ? `<span class="muted">${esc(n.model)}</span>` : ""}
         ${clients !== null ? `<span class="n" title="${esc(`${clients} ${this._tn("clients_n", clients)}`)}">${svgIcon(ICONS.devices)}${clients}</span>` : ""}
@@ -4381,7 +4382,7 @@ class RouterCard extends RouterBase {
       const value = cl.n === null ? this._t("unavailable") : cl.total ? `${cl.n} / ${cl.total}` : `${cl.n}`;
       const split = ["wired", "wireless", "guest"].map((k) => [k, num(this._s(sc[k]))]).filter(([, v]) => v !== null);
       const detail = sc.clients && split.length ? split.map(([k, v]) => `${this._t(k)} ${v}`).join(" · ") : "";
-      const attrs = cl.entity ? ` clickable" role="button" tabindex="0" data-entity="${cl.entity}"` : `"`;
+      const attrs = cl.entity ? ` clickable" role="button" tabindex="0" data-entity="${esc(cl.entity)}"` : `"`;
       tiles.push(`<div class="tile svc ${cl.n === null ? "off" : "ok"}${attrs} data-key="clients">${svgIcon(ICONS.devices)}<div><div class="k">${this._t("clients")}</div><div class="v">${esc(
         value
       )}</div>${detail ? `<div class="k">${esc(detail)}</div>` : ""}</div></div>`);
@@ -4392,7 +4393,7 @@ class RouterCard extends RouterBase {
       const unknown = noValue(wifi);
       const label = name.replace(/\b(switch)\b/gi, "").trim() || this._t("wifi");
       // The keyboard target is the label: the switch must not sit inside a role="button".
-      tiles.push(`<div class="tile svc clickable ${on ? "ok" : unknown ? "off" : ""}" data-key="${id}" data-entity="${id}">${svgIcon(
+      tiles.push(`<div class="tile svc clickable ${on ? "ok" : unknown ? "off" : ""}" data-key="${id}" data-entity="${esc(id)}">${svgIcon(
         on || unknown ? ICONS.wifi : ICONS.wifi_off
       )}<div role="button" tabindex="0"><div class="k">${esc(label)}</div><div class="v">${this._t(unknown ? "unavailable" : on ? "on" : "off")}</div></div>${this._wifiToggle(
         wifi,
@@ -4506,13 +4507,13 @@ class RouterMiniCard extends RouterCard {
     const foot = [];
     const link = this._link(box);
     if (link)
-      foot.push(`<span class="clickable ${link.cls}" role="button" tabindex="0" data-key="wan" data-entity="${link.entity}" title="${esc(this._t("wan"))}"><span class="dot"></span>&nbsp;${esc(
+      foot.push(`<span class="clickable ${link.cls}" role="button" tabindex="0" data-key="wan" data-entity="${esc(link.entity)}" title="${esc(this._t("wan"))}"><span class="dot"></span>&nbsp;${esc(
         this._t(link.key)
       )}</span>`);
     if (c.show_system !== false) {
       const cpu = num(this._s(sc.cpu));
       if (cpu !== null)
-        foot.push(`<span class="clickable ${this._level(cpu, "cpu")}" role="button" tabindex="0" data-key="cpu" data-entity="${refId(sc.cpu)}" title="${esc(this._t("cpu"))}">${svgIcon(
+        foot.push(`<span class="clickable ${this._level(cpu, "cpu")}" role="button" tabindex="0" data-key="cpu" data-entity="${esc(refId(sc.cpu))}" title="${esc(this._t("cpu"))}">${svgIcon(
           ICONS.chip
         )}${Math.round(cpu)}%</span>`);
       let hottest = null;
@@ -4521,14 +4522,14 @@ class RouterMiniCard extends RouterCard {
         if (v.c !== null && (!hottest || v.c > hottest.c)) hottest = { ...v, id: tmp.id };
       }
       if (hottest)
-        foot.push(`<span class="clickable ${this._level(hottest.c, "temp")}" role="button" tabindex="0" data-key="hottest" data-entity="${hottest.id}">${svgIcon(ICONS.temp)}${Math.round(
+        foot.push(`<span class="clickable ${this._level(hottest.c, "temp")}" role="button" tabindex="0" data-key="hottest" data-entity="${esc(hottest.id)}">${svgIcon(ICONS.temp)}${Math.round(
           hottest.raw
         )}${esc(hottest.unit)}</span>`);
     }
     const cl = this._clients(box);
     if (cl && cl.n !== null) {
       const label = `${cl.n} ${this._tn("clients_n", cl.n)}`;
-      foot.push(`<span data-key="clients"${cl.entity ? ` class="clickable" role="button" tabindex="0" data-entity="${cl.entity}"` : ""} title="${esc(label)}" aria-label="${esc(label)}">${svgIcon(
+      foot.push(`<span data-key="clients"${cl.entity ? ` class="clickable" role="button" tabindex="0" data-entity="${esc(cl.entity)}"` : ""} title="${esc(label)}" aria-label="${esc(label)}">${svgIcon(
         ICONS.devices
       )}${cl.n}</span>`);
     }
