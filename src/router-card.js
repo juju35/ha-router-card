@@ -3072,10 +3072,21 @@ const classify = (hass, profile, e, own) => {
 
 // Registry entries that have a state, by device and by integration. Cached on the identity of hass.entities (replaced
 // when the registry changes) and the number of states, not on hass.states, which is replaced on every state change.
+// The states are counted once per hass.states object (shared by every card on the page), without building a key array.
 let _index;
+const countStates = (states) => {
+  let n = 0;
+  for (const _ in states) n++;
+  return n;
+};
 const index = (hass) => {
-  const nStates = Object.keys(hass.states || {}).length;
-  if (_index && _index.entities === hass.entities && _index.nStates === nStates) return _index;
+  const states = hass.states || {};
+  if (_index && _index.entities === hass.entities && _index.states === states) return _index;
+  const nStates = countStates(states);
+  if (_index && _index.entities === hass.entities && _index.nStates === nStates) {
+    _index.states = states;
+    return _index;
+  }
   const byDevice = new Map();
   const byPlatform = new Map();
   for (const e of Object.values(hass.entities || {})) {
@@ -3088,7 +3099,7 @@ const index = (hass) => {
     byPlatform.get(e.platform).push(e);
   }
   for (const list of [...byDevice.values(), ...byPlatform.values()]) list.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
-  _index = { entities: hass.entities, nStates, byDevice, byPlatform };
+  _index = { entities: hass.entities, states, nStates, byDevice, byPlatform };
   return _index;
 };
 
