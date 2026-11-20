@@ -3285,17 +3285,27 @@ const discover = (hass, deviceId, config) => {
 // download only). The `entities` option's `speedtest` sets the sensors of another speed test (LibreSpeed…).
 const SPEEDTEST_KEYS = ["download", "upload", "ping"];
 const SPEEDTEST_PLATFORMS = ["speedtestdotnet", "fastdotcom"];
+// The Speedtest.net (else Fast.com) sensors, looked up once per index (registry and set of states), not on every
+// state change: the render signature reads them.
+const _speedtests = new WeakMap();
+const speedtestFound = (hass) => {
+  const idx = index(hass);
+  if (_speedtests.has(idx)) return _speedtests.get(idx);
+  const byPlatform = {};
+  for (const platform of SPEEDTEST_PLATFORMS) {
+    for (const e of idx.byPlatform.get(platform) || []) {
+      if (!e.entity_id.startsWith("sensor.") || !SPEEDTEST_KEYS.includes(e.translation_key)) continue;
+      (byPlatform[platform] ??= {})[e.translation_key] = e.entity_id;
+    }
+  }
+  const out = byPlatform.speedtestdotnet || byPlatform.fastdotcom || {};
+  _speedtests.set(idx, out);
+  return out;
+};
 const speedtestOf = (hass, box, config) => {
   const sc = box?.scalars || {};
   let found = sc.st_down || sc.st_up ? { download: sc.st_down, upload: sc.st_up, ping: sc.st_ping } : null;
-  if (!found) {
-    const byPlatform = {};
-    for (const e of Object.values(hass.entities || {})) {
-      if (!SPEEDTEST_PLATFORMS.includes(e.platform) || e.hidden || !e.entity_id.startsWith("sensor.") || !SPEEDTEST_KEYS.includes(e.translation_key)) continue;
-      if (hass.states[e.entity_id]) (byPlatform[e.platform] ??= {})[e.translation_key] = e.entity_id;
-    }
-    found = { ...(byPlatform.speedtestdotnet || byPlatform.fastdotcom || {}) };
-  }
+  if (!found) found = { ...speedtestFound(hass) };
   const own = config?.entities?.speedtest;
   if (own && typeof own === "object") {
     const chosen = SPEEDTEST_KEYS.filter((k) => isEntityId(own[k]));
@@ -4679,17 +4689,26 @@ class RouterEditorBase extends HTMLElement {
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
       }
     }
-    const data = { rate_unit: "bytes", kind: "", illustration_theme: "auto", ...THRESHOLDS, ...this._config };
-    for (const name of ["show_title", "show_subtitle", "show_image", "show_logo", "illustration", ...this.constructor.toggles]) if (data[name] === undefined) data[name] = true;
     this._form.hass = this._hass;
-    this._form.data = data;
-    // The schema is rebuilt on every hass update (every state change) but only handed to the form when its options
-    // (devices, detected kind, language) changed, so ha-form does not re-render for nothing.
-    const schema = this._schema();
-    const key = JSON.stringify(schema);
-    if (key !== this._schemaKey) {
-      this._schemaKey = key;
-      this._form.schema = schema;
+    // The data is handed to the form only when the configuration changed, not on every state change.
+    if (this._dataFor !== this._config) {
+      this._dataFor = this._config;
+      const data = { rate_unit: "bytes", kind: "", illustration_theme: "auto", ...THRESHOLDS, ...this._config };
+      for (const name of ["show_title", "show_subtitle", "show_image", "show_logo", "illustration", ...this.constructor.toggles]) if (data[name] === undefined) data[name] = true;
+      this._form.data = data;
+    }
+    // The schema (devices, detected kind, language) is built again only when the registries, the set of states, the
+    // device or the language changed, and handed to the form only when it differs, so ha-form does not re-render for
+    // nothing.
+    const deps = [index(this._hass), this._hass.devices, this._config.device, lang(this._hass, this._config)];
+    if (!sameSig(deps, this._schemaDeps)) {
+      this._schemaDeps = deps;
+      const schema = this._schema();
+      const key = JSON.stringify(schema);
+      if (key !== this._schemaKey) {
+        this._schemaKey = key;
+        this._form.schema = schema;
+      }
     }
   }
 }
