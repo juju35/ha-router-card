@@ -73,7 +73,13 @@ const overlaps = async (cards) => {
             if (b.width && b.height && b.left < s.right - 0.5 && b.right > s.left + 0.5 && b.top < s.bottom - 0.5 && b.bottom > s.top + 0.5)
               hits.push(`${host.className}: "${txt}"`);
         }
-        res.push({ at: `${type}${zoom ? " zoomed" : ""} ${width}px`, sparks: sparks.length, hits });
+        const gauges = [...el.shadowRoot.querySelectorAll(".gauge")].map((g) => ({
+          h: Math.round(g.getBoundingClientRect().height),
+          top: Math.round(g.getBoundingClientRect().top),
+          bg: getComputedStyle(g).backgroundColor,
+          spark: !!g.querySelector(":scope > .spark"),
+        }));
+        res.push({ at: `${type}${zoom ? " zoomed" : ""} ${width}px`, sparks: sparks.length, hits, gauges });
       }
       return res;
     },
@@ -96,5 +102,18 @@ test("sparklines sit in their own band: no text or icon of the tile or row under
   for (const m of await overlaps(cards)) {
     assert.ok(m.sparks > 0, `${m.at}: no sparkline drawn`);
     assert.deepEqual(m.hits, [], `${m.at}: text under a sparkline`);
+  }
+});
+
+test("system gauges are neutral tiles of one height, with or without a 24 h curve", async (t) => {
+  if (skip) return t.skip(skip);
+  const cards = [];
+  for (const width of [300, 400]) cards.push({ type: "router-card", width }, { type: "router-mini-card", width, zoom: true });
+  for (const m of await overlaps(cards)) {
+    assert.ok(m.gauges.some((g) => g.spark) && m.gauges.some((g) => !g.spark), `${m.at}: gauges with and without a curve expected`);
+    assert.equal(new Set(m.gauges.map((g) => g.h)).size, 1, `${m.at}: gauge heights differ ${JSON.stringify(m.gauges)}`);
+    for (const g of m.gauges) assert.notEqual(g.bg, "rgba(0, 0, 0, 0)", `${m.at}: gauge without a tile background`);
+    // Four gauges (CPU, RAM, two temperatures) stay on one row down to 300 px.
+    if (m.gauges.length <= 4) assert.equal(new Set(m.gauges.map((g) => g.top)).size, 1, `${m.at}: gauges wrap ${JSON.stringify(m.gauges)}`);
   }
 });

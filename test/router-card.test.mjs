@@ -353,3 +353,86 @@ test("night picture: the dark theme alone; illustration_theme wins", () => {
   assert.equal(rcIsNight(h("below_horizon", true), { illustration_theme: "day" }), false);
   assert.equal(rcIsNight(h("above_horizon"), { illustration_theme: "night" }), true);
 });
+
+test("Speedtest.net stands in for a router without its own speed test (Fast.com otherwise), looked up once per registry", () => {
+  const hass = mock("asuswrt", { rt: { name: "RT-AX88U", model: "RT-AX88U" } }, [
+    ["sensor.rt_ax88u_download_speed", "rt", null, "1200", rate("kB/s")],
+    ["sensor.rt_ax88u_upload_speed", "rt", null, "300", rate("kB/s")],
+  ]);
+  const add = (id, platform, key, state) => {
+    hass.states[id] = { entity_id: id, state, attributes: {} };
+    hass.entities[id] = { entity_id: id, platform, translation_key: key };
+  };
+  add("sensor.fast_com_download", "fastdotcom", "download", "480");
+  add("sensor.speedtest_download", "speedtestdotnet", "download", "512.4");
+  add("sensor.speedtest_upload", "speedtestdotnet", "upload", "48.1");
+  add("sensor.speedtest_ping", "speedtestdotnet", "ping", "9");
+  add("sensor.speedtest_hidden", "speedtestdotnet", "ping", "9");
+  hass.entities["sensor.speedtest_hidden"].hidden = true;
+  const box = discover(hass, "rt", {});
+  const found = speedtestOf(hass, box, {});
+  assert.deepEqual(plain(found), { download: "sensor.speedtest_download", upload: "sensor.speedtest_upload", ping: "sensor.speedtest_ping" });
+  // Same registry and states: the same lookup, whatever the state changes.
+  assert.deepEqual(plain(speedtestOf({ ...hass, states: { ...hass.states } }, box, {})), plain(found));
+  // The entities option's speed test replaces it.
+  assert.deepEqual(plain(speedtestOf(hass, box, { entities: { speedtest: { download: "sensor.libre_down" } } })), { download: "sensor.libre_down" });
+  delete hass.entities["sensor.speedtest_download"];
+  delete hass.entities["sensor.speedtest_upload"];
+  delete hass.entities["sensor.speedtest_ping"];
+  delete hass.entities["sensor.speedtest_hidden"];
+  const fast = { ...hass, entities: { ...hass.entities } };
+  assert.deepEqual(plain(speedtestOf(fast, discover(fast, "rt", {}), {})), { download: "sensor.fast_com_download" });
+});
+
+test("the editor hands its data and schema to the form only when they change, not on every state change", () => {
+  const { RouterCardEditor } = load("router-card.js", ["RouterCardEditor"]);
+  const hass = { ...integrations.firewalla, language: "en" };
+  const ed = new RouterCardEditor();
+  ed.appendChild = () => {};
+  ed.setConfig({ type: "custom:router-card", device: discover(hass, undefined, {}).id });
+  ed.hass = hass;
+  const form = ed._form;
+  const data = form.data;
+  const schema = form.schema;
+  assert.ok(data && schema);
+  // A state change elsewhere: a new hass, the same registries and set of states.
+  ed.hass = { ...hass, states: { ...hass.states } };
+  assert.equal(form.data, data);
+  assert.equal(form.schema, schema);
+  ed.setConfig({ ...ed._config, show_lan: false });
+  assert.notEqual(form.data, data);
+  assert.equal(form.data.show_lan, false);
+});
+
+test("the registry index is reused for the same states object and rebuilt when a registered entity gets a state", () => {
+  const { index } = load("router-card.js", ["index"]);
+  const hass = { ...integrations.unifi };
+  const a = index(hass);
+  // Another card on the same hass, then a state change with the same set of states: no rebuild.
+  assert.equal(index({ ...hass }), a);
+  assert.equal(index({ ...hass, states: { ...hass.states } }), a);
+  // A registered entity that had no state gets one: rebuilt, and it is listed.
+  const [id] = Object.keys(hass.entities);
+  const states = { ...hass.states };
+  delete states[id];
+  const without = index({ ...hass, states });
+  assert.notEqual(without, a);
+  assert.ok(![...without.byPlatform.values()].flat().some((e) => e.entity_id === id));
+  const back = index({ ...hass, states: { ...states, [id]: hass.states[id] } });
+  assert.notEqual(back, without);
+  assert.ok([...back.byPlatform.values()].flat().some((e) => e.entity_id === id));
+});
+
+test("the mini card's height follows its content and the view re-measures it on zoom", () => {
+  const { RouterMiniCard } = load("router-card.js", ["RouterMiniCard"]);
+  const card = new RouterMiniCard();
+  const events = [];
+  card.dispatchEvent = (e) => events.push(e.type);
+  card._update = () => {};
+  assert.deepEqual(JSON.parse(JSON.stringify(card.getGridOptions())), { columns: 6, min_columns: 6, rows: "auto" });
+  card._zoom(true);
+  assert.deepEqual(JSON.parse(JSON.stringify(card.getGridOptions())), { columns: 12, min_columns: 9, rows: "auto" });
+  assert.deepEqual(events, ["iron-resize"]);
+  card._zoom(true);
+  assert.deepEqual(events, ["iron-resize"]);
+});

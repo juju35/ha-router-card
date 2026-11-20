@@ -3072,10 +3072,21 @@ const classify = (hass, profile, e, own) => {
 
 // Registry entries that have a state, by device and by integration. Cached on the identity of hass.entities (replaced
 // when the registry changes) and the number of states, not on hass.states, which is replaced on every state change.
+// The states are counted once per hass.states object (shared by every card on the page), without building a key array.
 let _index;
+const countStates = (states) => {
+  let n = 0;
+  for (const _ in states) n++;
+  return n;
+};
 const index = (hass) => {
-  const nStates = Object.keys(hass.states || {}).length;
-  if (_index && _index.entities === hass.entities && _index.nStates === nStates) return _index;
+  const states = hass.states || {};
+  if (_index && _index.entities === hass.entities && _index.states === states) return _index;
+  const nStates = countStates(states);
+  if (_index && _index.entities === hass.entities && _index.nStates === nStates) {
+    _index.states = states;
+    return _index;
+  }
   const byDevice = new Map();
   const byPlatform = new Map();
   for (const e of Object.values(hass.entities || {})) {
@@ -3088,7 +3099,7 @@ const index = (hass) => {
     byPlatform.get(e.platform).push(e);
   }
   for (const list of [...byDevice.values(), ...byPlatform.values()]) list.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
-  _index = { entities: hass.entities, nStates, byDevice, byPlatform };
+  _index = { entities: hass.entities, states, nStates, byDevice, byPlatform };
   return _index;
 };
 
@@ -3285,17 +3296,27 @@ const discover = (hass, deviceId, config) => {
 // download only). The `entities` option's `speedtest` sets the sensors of another speed test (LibreSpeed…).
 const SPEEDTEST_KEYS = ["download", "upload", "ping"];
 const SPEEDTEST_PLATFORMS = ["speedtestdotnet", "fastdotcom"];
+// The Speedtest.net (else Fast.com) sensors, looked up once per index (registry and set of states), not on every
+// state change: the render signature reads them.
+const _speedtests = new WeakMap();
+const speedtestFound = (hass) => {
+  const idx = index(hass);
+  if (_speedtests.has(idx)) return _speedtests.get(idx);
+  const byPlatform = {};
+  for (const platform of SPEEDTEST_PLATFORMS) {
+    for (const e of idx.byPlatform.get(platform) || []) {
+      if (!e.entity_id.startsWith("sensor.") || !SPEEDTEST_KEYS.includes(e.translation_key)) continue;
+      (byPlatform[platform] ??= {})[e.translation_key] = e.entity_id;
+    }
+  }
+  const out = byPlatform.speedtestdotnet || byPlatform.fastdotcom || {};
+  _speedtests.set(idx, out);
+  return out;
+};
 const speedtestOf = (hass, box, config) => {
   const sc = box?.scalars || {};
   let found = sc.st_down || sc.st_up ? { download: sc.st_down, upload: sc.st_up, ping: sc.st_ping } : null;
-  if (!found) {
-    const byPlatform = {};
-    for (const e of Object.values(hass.entities || {})) {
-      if (!SPEEDTEST_PLATFORMS.includes(e.platform) || e.hidden || !e.entity_id.startsWith("sensor.") || !SPEEDTEST_KEYS.includes(e.translation_key)) continue;
-      if (hass.states[e.entity_id]) (byPlatform[e.platform] ??= {})[e.translation_key] = e.entity_id;
-    }
-    found = { ...(byPlatform.speedtestdotnet || byPlatform.fastdotcom || {}) };
-  }
+  if (!found) found = { ...speedtestFound(hass) };
   const own = config?.entities?.speedtest;
   if (own && typeof own === "object") {
     const chosen = SPEEDTEST_KEYS.filter((k) => isEntityId(own[k]));
@@ -3701,6 +3722,7 @@ class RouterBase extends HTMLElement {
     this._dialogOutside?.off();
     this._resize?.disconnect();
     this._fitWidth = null;
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(this._fitFrame);
     window.removeEventListener("keydown", this._onKey);
     this._pressing = false;
     window.removeEventListener("pointerup", this._onPressEnd, true);
@@ -3884,7 +3906,7 @@ class RouterBase extends HTMLElement {
   // Download / upload rate tile, shared by the full and the mini card.
   _rateTile(id, cls, icon, k, hist) {
     // A tile without its sensor opens no more-info: not focusable.
-    const attrs = id ? `clickable ${cls}" role="button" tabindex="0" data-entity="${refId(id)}"` : `${cls}"`;
+    const attrs = id ? `clickable ${cls}" role="button" tabindex="0" data-entity="${esc(refId(id))}"` : `${cls}"`;
     return `<div class="tile ${attrs}>${spark(hist?.[id], hist?.end)}${svgIcon(icon)}<div><div class="k">${k}</div><div class="v">${this._rate(
       id
     )}</div></div></div>`;
@@ -4019,7 +4041,7 @@ class RouterBase extends HTMLElement {
     if (!link) return "";
     const text = `${this._t("wan")} · ${this._t(link.key)}`;
     // The text is also the tooltip and accessible name: on a narrow card only the coloured dot is shown.
-    return `<span class="chip status clickable ${link.cls}" role="button" tabindex="0" data-entity="${link.entity}" title="${esc(text)}" aria-label="${esc(
+    return `<span class="chip status clickable ${link.cls}" role="button" tabindex="0" data-entity="${esc(link.entity)}" title="${esc(text)}" aria-label="${esc(
       text
     )}"><span class="dot"></span><span class="txt">${esc(short ? this._t(link.key) : text)}</span></span>`;
   }
@@ -4035,7 +4057,7 @@ class RouterBase extends HTMLElement {
     const up = this._s(box.scalars.update);
     if (up?.state !== "on") return "";
     const text = esc(this._t("update_available"));
-    return `<span class="chip warn upd clickable" role="button" tabindex="0" data-entity="${up.entity_id}" title="${text}" aria-label="${text}">${svgIcon(
+    return `<span class="chip warn upd clickable" role="button" tabindex="0" data-entity="${esc(up.entity_id)}" title="${text}" aria-label="${text}">${svgIcon(
       ICONS.update
     )}<span class="txt">${text}</span></span>`;
   }
@@ -4159,17 +4181,19 @@ const FULL_STYLE = `
   .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; margin-top: 6px; }
   .facts > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
   .facts .icon { width: 14px; height: 14px; color: var(--secondary-text-color); }
-  .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
-  .gauge { display: flex; flex-direction: column; align-items: center; position: relative; padding: 4px 0 2px; border-radius: 10px; overflow: hidden; }
+  .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+  /* Each gauge is a neutral tile (the "B calm" look of the rate tiles); every tile has the same height, with or without
+     a curve, so a row of CPU / RAM / temperatures lines up. */
+  .gauge { display: flex; flex-direction: column; align-items: center; position: relative; padding: 6px 0 22px; border-radius: 10px; overflow: hidden;
+           background: var(--secondary-background-color, rgba(127,127,127,.08)); }
   .gauge > :not(.spark) { position: relative; }
-  /* The 24 h curve of a percentage, on a 0-100 scale, in its own 24 px band under the ring and the label. */
-  .gauge:has(> .spark) { padding-bottom: 28px; }
-  .gauge .spark { position: absolute; inset: auto 0 0; width: 100%; height: 24px; pointer-events: none; }
+  /* The 24 h curve of a percentage, on a 0-100 scale, in an 18 px band at the tile's foot, under the ring and the label. */
+  .gauge .spark { position: absolute; inset: auto 0 0; width: 100%; height: 18px; pointer-events: none; }
   .ring { width: 52px; height: 52px; transform: rotate(-90deg); }
   .ring circle { fill: none; stroke-width: 6; }
   .ring .track { stroke: var(--divider-color, rgba(127,127,127,.25)); }
   .ring .value { stroke: var(--c, var(--rc-accent)); stroke-linecap: round; transition: stroke-dasharray .6s ease; }
-  .gauge .val { position: absolute; top: 4px; height: 52px; display: flex; align-items: center; justify-content: center; }
+  .gauge .val { position: absolute; top: 6px; height: 52px; display: flex; align-items: center; justify-content: center; }
   .gauge .val b { font-size: 14px; font-weight: 500; }
   .gauge .lbl { font-size: 12px; color: var(--secondary-text-color); margin-top: 0; text-align: center; white-space: nowrap;
                 overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -4250,14 +4274,14 @@ class RouterCard extends RouterBase {
     const ip6 = this._s(sc.ip6);
     if (ip4 && !noValue(ip4))
       facts.push(
-        `<span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.ip)}" title="${esc(ip6 && !noValue(ip6) ? ip6.state : "")}">${svgIcon(
+        `<span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.ip))}" title="${esc(ip6 && !noValue(ip6) ? ip6.state : "")}">${svgIcon(
           ICONS.ip
         )}${esc(ip4.state)}</span>`
       );
     const up = this._uptime(box);
     if (up !== null)
       facts.push(
-        `<span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.boot)}">${svgIcon(ICONS.timer)}${this._t("uptime")} ${fmtUptime(
+        `<span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.boot))}">${svgIcon(ICONS.timer)}${this._t("uptime")} ${fmtUptime(
           up,
           this._hass,
           this._config
@@ -4270,7 +4294,7 @@ class RouterCard extends RouterBase {
         .filter(Boolean)
         .join(" · ");
       facts.push(
-        `<span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.latency || sc.loss)}" title="${esc(this._t("latency"))}">${svgIcon(ICONS.network)}${esc(text)}</span>`
+        `<span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.latency || sc.loss))}" title="${esc(this._t("latency"))}">${svgIcon(ICONS.network)}${esc(text)}</span>`
       );
     }
     const sp = this._config.show_speedtest !== false ? speedtestOf(this._hass, box, this._config) : null;
@@ -4285,7 +4309,7 @@ class RouterCard extends RouterBase {
       ].filter(Boolean);
       const when = (dl || ul)?.last_changed;
       facts.push(
-        `<span class="clickable speedtest" role="button" tabindex="0" data-entity="${sp.download || sp.upload}" title="${esc(
+        `<span class="clickable speedtest" role="button" tabindex="0" data-entity="${esc(sp.download || sp.upload)}" title="${esc(
           `${this._t("speedtest")}${when ? ` · ${new Date(when).toLocaleString(numLang(this._hass, this._config))}` : ""}`
         )}">${svgIcon(ICONS.speedtest)}${esc(spParts.join(" · "))}</span>`
       );
@@ -4298,10 +4322,10 @@ class RouterCard extends RouterBase {
     </div>`;
   }
 
-  // A ring gauge with its 24 h curve (percentages only) behind it.
+  // A ring gauge in a neutral tile, with its 24 h curve (percentages only) at the tile's foot.
   _gauge(ref, pct, text, label, cls, hist, title) {
     const id = refId(ref);
-    return `<div class="gauge clickable ${cls}" role="button" tabindex="0" data-key="${esc(ref)}" data-entity="${id}" title="${esc(title || label)}">
+    return `<div class="gauge clickable ${cls}" role="button" tabindex="0" data-key="${esc(ref)}" data-entity="${esc(id)}" title="${esc(title || label)}">
         ${hist ? spark(hist[ref], hist.end, 100) : ""}
         ${ring(pct)}
         <div class="val"><b>${text}</b></div>
@@ -4329,14 +4353,14 @@ class RouterCard extends RouterBase {
     }
     const fans = box.fans.map(({ id, name }) => {
       const rpm = num(this._s(id));
-      return `<div class="tile clickable" role="button" tabindex="0" data-key="${id}" data-entity="${id}">${svgIcon(ICONS.fan, rpm ? "spin" : "")}<div><div class="k">${esc(
+      return `<div class="tile clickable" role="button" tabindex="0" data-key="${id}" data-entity="${esc(id)}">${svgIcon(ICONS.fan, rpm ? "spin" : "")}<div><div class="k">${esc(
         name
       )}</div><div class="v">${rpm === null ? "—" : `${Math.round(rpm)} ${this._t("rpm")}`}</div></div></div>`;
     });
     const load = num(this._s(sc.load));
     const facts =
       load !== null
-        ? `<div class="facts"><span class="clickable" role="button" tabindex="0" data-entity="${refId(sc.load)}">${svgIcon(ICONS.chip)}${this._t("load")} ${fmtNum(
+        ? `<div class="facts"><span class="clickable" role="button" tabindex="0" data-entity="${esc(refId(sc.load))}">${svgIcon(ICONS.chip)}${this._t("load")} ${fmtNum(
             load,
             this._hass,
             this._config,
@@ -4361,7 +4385,7 @@ class RouterCard extends RouterBase {
       const cls = !n.online ? "" : on === true ? "ok" : on === false ? "crit" : "off";
       const clients = num(this._s(n.clients));
       const state = n.online ? `<span class="chip ${cls}">${esc(this._t(on === true ? "online" : on === false ? "offline" : noValue(s) ? "unavailable" : "unknown"))}</span>` : "";
-      return `<div class="node clickable" role="button" tabindex="0" data-key="${esc(n.id)}" data-entity="${refId(n.entity)}">
+      return `<div class="node clickable" role="button" tabindex="0" data-key="${esc(n.id)}" data-entity="${esc(refId(n.entity))}">
         <span class="dot ${cls || "off"}"></span><span class="grow">${esc(n.name || n.model)}${n.main ? ` <span class="muted">· ${esc(this._t("main"))}</span>` : ""}</span>
         ${n.model && n.model !== n.name ? `<span class="muted">${esc(n.model)}</span>` : ""}
         ${clients !== null ? `<span class="n" title="${esc(`${clients} ${this._tn("clients_n", clients)}`)}">${svgIcon(ICONS.devices)}${clients}</span>` : ""}
@@ -4381,7 +4405,7 @@ class RouterCard extends RouterBase {
       const value = cl.n === null ? this._t("unavailable") : cl.total ? `${cl.n} / ${cl.total}` : `${cl.n}`;
       const split = ["wired", "wireless", "guest"].map((k) => [k, num(this._s(sc[k]))]).filter(([, v]) => v !== null);
       const detail = sc.clients && split.length ? split.map(([k, v]) => `${this._t(k)} ${v}`).join(" · ") : "";
-      const attrs = cl.entity ? ` clickable" role="button" tabindex="0" data-entity="${cl.entity}"` : `"`;
+      const attrs = cl.entity ? ` clickable" role="button" tabindex="0" data-entity="${esc(cl.entity)}"` : `"`;
       tiles.push(`<div class="tile svc ${cl.n === null ? "off" : "ok"}${attrs} data-key="clients">${svgIcon(ICONS.devices)}<div><div class="k">${this._t("clients")}</div><div class="v">${esc(
         value
       )}</div>${detail ? `<div class="k">${esc(detail)}</div>` : ""}</div></div>`);
@@ -4392,7 +4416,7 @@ class RouterCard extends RouterBase {
       const unknown = noValue(wifi);
       const label = name.replace(/\b(switch)\b/gi, "").trim() || this._t("wifi");
       // The keyboard target is the label: the switch must not sit inside a role="button".
-      tiles.push(`<div class="tile svc clickable ${on ? "ok" : unknown ? "off" : ""}" data-key="${id}" data-entity="${id}">${svgIcon(
+      tiles.push(`<div class="tile svc clickable ${on ? "ok" : unknown ? "off" : ""}" data-key="${id}" data-entity="${esc(id)}">${svgIcon(
         on || unknown ? ICONS.wifi : ICONS.wifi_off
       )}<div role="button" tabindex="0"><div class="k">${esc(label)}</div><div class="v">${this._t(unknown ? "unavailable" : on ? "on" : "off")}</div></div>${this._wifiToggle(
         wifi,
@@ -4472,14 +4496,17 @@ class RouterMiniCard extends RouterCard {
     return this._zoomed ? super.getCardSize() : 3;
   }
 
+  // Height follows the content (compact or zoomed), as the sibling mini cards.
   getGridOptions() {
-    return this._zoomed ? super.getGridOptions() : { columns: 6, min_columns: 6 };
+    return { ...(this._zoomed ? super.getGridOptions() : { columns: 6, min_columns: 6 }), rows: "auto" };
   }
 
   _zoom(on) {
     if (this._zoomed === on) return;
     this._zoomed = on;
     this._update();
+    // Lets a masonry / sections view re-measure the card after the switch.
+    this.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
   }
 
   _headerEnd() {
@@ -4506,13 +4533,13 @@ class RouterMiniCard extends RouterCard {
     const foot = [];
     const link = this._link(box);
     if (link)
-      foot.push(`<span class="clickable ${link.cls}" role="button" tabindex="0" data-key="wan" data-entity="${link.entity}" title="${esc(this._t("wan"))}"><span class="dot"></span>&nbsp;${esc(
+      foot.push(`<span class="clickable ${link.cls}" role="button" tabindex="0" data-key="wan" data-entity="${esc(link.entity)}" title="${esc(this._t("wan"))}"><span class="dot"></span>&nbsp;${esc(
         this._t(link.key)
       )}</span>`);
     if (c.show_system !== false) {
       const cpu = num(this._s(sc.cpu));
       if (cpu !== null)
-        foot.push(`<span class="clickable ${this._level(cpu, "cpu")}" role="button" tabindex="0" data-key="cpu" data-entity="${refId(sc.cpu)}" title="${esc(this._t("cpu"))}">${svgIcon(
+        foot.push(`<span class="clickable ${this._level(cpu, "cpu")}" role="button" tabindex="0" data-key="cpu" data-entity="${esc(refId(sc.cpu))}" title="${esc(this._t("cpu"))}">${svgIcon(
           ICONS.chip
         )}${Math.round(cpu)}%</span>`);
       let hottest = null;
@@ -4521,14 +4548,14 @@ class RouterMiniCard extends RouterCard {
         if (v.c !== null && (!hottest || v.c > hottest.c)) hottest = { ...v, id: tmp.id };
       }
       if (hottest)
-        foot.push(`<span class="clickable ${this._level(hottest.c, "temp")}" role="button" tabindex="0" data-key="hottest" data-entity="${hottest.id}">${svgIcon(ICONS.temp)}${Math.round(
+        foot.push(`<span class="clickable ${this._level(hottest.c, "temp")}" role="button" tabindex="0" data-key="hottest" data-entity="${esc(hottest.id)}">${svgIcon(ICONS.temp)}${Math.round(
           hottest.raw
         )}${esc(hottest.unit)}</span>`);
     }
     const cl = this._clients(box);
     if (cl && cl.n !== null) {
       const label = `${cl.n} ${this._tn("clients_n", cl.n)}`;
-      foot.push(`<span data-key="clients"${cl.entity ? ` class="clickable" role="button" tabindex="0" data-entity="${cl.entity}"` : ""} title="${esc(label)}" aria-label="${esc(label)}">${svgIcon(
+      foot.push(`<span data-key="clients"${cl.entity ? ` class="clickable" role="button" tabindex="0" data-entity="${esc(cl.entity)}"` : ""} title="${esc(label)}" aria-label="${esc(label)}">${svgIcon(
         ICONS.devices
       )}${cl.n}</span>`);
     }
@@ -4678,17 +4705,26 @@ class RouterEditorBase extends HTMLElement {
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
       }
     }
-    const data = { rate_unit: "bytes", kind: "", illustration_theme: "auto", ...THRESHOLDS, ...this._config };
-    for (const name of ["show_title", "show_subtitle", "show_image", "show_logo", "illustration", ...this.constructor.toggles]) if (data[name] === undefined) data[name] = true;
     this._form.hass = this._hass;
-    this._form.data = data;
-    // The schema is rebuilt on every hass update (every state change) but only handed to the form when its options
-    // (devices, detected kind, language) changed, so ha-form does not re-render for nothing.
-    const schema = this._schema();
-    const key = JSON.stringify(schema);
-    if (key !== this._schemaKey) {
-      this._schemaKey = key;
-      this._form.schema = schema;
+    // The data is handed to the form only when the configuration changed, not on every state change.
+    if (this._dataFor !== this._config) {
+      this._dataFor = this._config;
+      const data = { rate_unit: "bytes", kind: "", illustration_theme: "auto", ...THRESHOLDS, ...this._config };
+      for (const name of ["show_title", "show_subtitle", "show_image", "show_logo", "illustration", ...this.constructor.toggles]) if (data[name] === undefined) data[name] = true;
+      this._form.data = data;
+    }
+    // The schema (devices, detected kind, language) is built again only when the registries, the set of states, the
+    // device or the language changed, and handed to the form only when it differs, so ha-form does not re-render for
+    // nothing.
+    const deps = [index(this._hass), this._hass.devices, this._config.device, lang(this._hass, this._config)];
+    if (!sameSig(deps, this._schemaDeps)) {
+      this._schemaDeps = deps;
+      const schema = this._schema();
+      const key = JSON.stringify(schema);
+      if (key !== this._schemaKey) {
+        this._schemaKey = key;
+        this._form.schema = schema;
+      }
     }
   }
 }
@@ -4701,7 +4737,8 @@ class RouterCardEditor extends RouterEditorBase {
 
 class RouterMiniCardEditor extends RouterEditorBase {
   static get toggles() {
-    return ["show_network", "show_history", "show_system", "zoom"];
+    // The mini card's detail view is the full card: its options too, as on the other cards.
+    return ["show_network", "show_history", "show_speedtest", "show_system", "show_nodes", "show_lan", "zoom"];
   }
 }
 

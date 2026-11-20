@@ -49,7 +49,7 @@ Entities are **discovered automatically**, you don't have to pick them one by on
 - A drawing of the kind of device, in the brand's colour, opening the admin interface; model and firmware under the name; a chip when a firmware update is waiting
 - Download / upload rates of the WAN, in bytes (kB/s, MB/s) or bits (kb/s, Mb/s), with their last 24 hours drawn behind each tile (recorder statistics), on the full card and the mini card
 - WAN IP address, uptime, latency and packet loss, and the last speed test: the router's own (Firewalla, NETGEAR, Linksys Velop), else the [Speedtest.net](https://www.home-assistant.io/integrations/speedtestdotnet/) or [Fast.com](https://www.home-assistant.io/integrations/fastdotcom/) integration's, or another one set in `entities`
-- System: CPU, RAM and disk usage gauges with their last 24 hours behind them (0-100 % scale), temperature gauges, fans, load average
+- System: CPU, RAM, disk and temperature gauges as neutral tiles of one height, the last 24 hours of CPU, RAM and disk at the foot of their tile (0-100 % scale), fans, load average
 - Mesh and network devices: every mesh unit, access point or switch of the router's integration, with its state and its clients (the main unit first on a mesh system)
 - Local network: connected clients (with the wired / Wi-Fi / guest split when the integration gives it), and a tile per Wi-Fi network with a switch that turns it on, or off after a confirmation popup
 - A restart button at the top right of the full card reboots the device, after a confirmation popup; shown only when the integration exposes it
@@ -59,7 +59,7 @@ Entities are **discovered automatically**, you don't have to pick them one by on
 - Visual editor in the dashboard UI for both cards (no YAML needed)
 - Light and dark mode, 22 languages (see [Translations](#translations))
 - Unavailable entities (for example while the router restarts) are shown as unavailable, not as offline or Wi-Fi off; the restart button is disabled meanwhile
-- Sections view: the full card needs at least 9 columns, the mini card 6; on a narrow card the picture gets smaller then hidden, and the status pill shows only its coloured dot
+- Sections view: the full card needs at least 9 columns, the mini card 6, and its height follows its content (compact or expanded); on a narrow card the picture gets smaller then hidden, and the status pill shows only its coloured dot
 - Single file, no external dependency: the drawings and brand logos are embedded; only English is in it, the other languages are loaded when needed
 
 ## Supported integrations
@@ -210,11 +210,11 @@ rate_unit: bits
 | `illustration` | both | `true` | Illustrated header (network scene with the device's drawing, WAN state, clients); `false` for the classic header |
 | `illustration_theme` | both | `auto` | `auto` (follows the Home Assistant theme: night with a dark theme, day with a light theme), `day` or `night` |
 | `show_network` | both | `true` | Download / upload rates (and WAN IP, uptime, latency, speed test on the full card) |
-| `show_history` | both | `true` | 24 h curves behind the rate tiles and the CPU / RAM / disk gauges, from the recorder's 5-minute statistics (sensors with a `state_class`): the curve breaks where the recorder has no data |
-| `show_speedtest` | full | `true` | The last speed test in the network section (download, upload and ping; its time on hover) |
+| `show_history` | both | `true` | 24 h curves at the foot of the rate tiles and the CPU / RAM / disk gauge tiles, from the recorder's 5-minute statistics (sensors with a `state_class`): the curve breaks where the recorder has no data |
+| `show_speedtest` | both | `true` | The last speed test in the network section (download, upload and ping; its time on hover) |
 | `show_system` | both | `true` | CPU, RAM, disk and temperature gauges, fans and load average (CPU and hottest temperature on the mini card) |
-| `show_nodes` | full | `true` | Mesh units, access points and switches of the router's integration |
-| `show_lan` | full | `true` | Connected clients and Wi-Fi networks |
+| `show_nodes` | both | `true` | Mesh units, access points and switches of the router's integration |
+| `show_lan` | both | `true` | Connected clients and Wi-Fi networks |
 | `entities` | both | — | Sensors of your choice (see below) |
 | `cpu_warning`, `cpu_critical` | both | `80`, `95` | CPU usage (%) from which the gauge turns orange, red |
 | `ram_warning`, `ram_critical` | both | `80`, `90` | RAM usage (%) from which the gauge turns orange, red |

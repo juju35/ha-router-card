@@ -40,5 +40,6 @@ export const load = (file, names) => {
     Date,
   };
   vm.createContext(context);
-  return vm.runInContext(`${src}\n;({ ${names.join(", ")} })`, context);
+  // The file name lets `node --test --experimental-test-coverage` report the card's own coverage.
+  return vm.runInContext(`${src}\n;({ ${names.join(", ")} })`, context, { filename: new URL(`../src/${file}`, import.meta.url).href });
 };
