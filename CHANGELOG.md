@@ -7,10 +7,12 @@
 - The Router Mini Card's visual editor also offers **Speed test**, **Network devices** and **LAN** (`show_speedtest`, `show_nodes`, `show_lan`): its detail view is the full card, which shows them (README: "both").
 
 ### Performance
+- The registry index counts the states once per states object (shared by every card on the page) and without building a key array, no longer on every card's `hass` update.
 - The Speedtest.net / Fast.com sensors are looked up once per registry and set of states, no longer through every entity of Home Assistant on each state change.
 - The visual editor hands its data to the form only when the configuration changes, and builds its schema (devices, detected kind) only when the registries, the device or the language change, no longer on every state change.
 
 ### Fixes
+- Router Mini Card: its height follows its content (`rows: "auto"`, compact or zoomed) and it asks the view to re-measure it when it expands or collapses, like the sibling mini cards.
 - System section: the gauges keep four to a row down to a 300 px card (64 px minimum width instead of 76 px), no longer 3 + 1.
 - Entity ids are escaped in the card's attributes like every other value (ids from the `entities` option included).
 - Leaving the page also cancels a pending header measurement.

@@ -59,7 +59,7 @@ Entities are **discovered automatically**, you don't have to pick them one by on
 - Visual editor in the dashboard UI for both cards (no YAML needed)
 - Light and dark mode, 22 languages (see [Translations](#translations))
 - Unavailable entities (for example while the router restarts) are shown as unavailable, not as offline or Wi-Fi off; the restart button is disabled meanwhile
-- Sections view: the full card needs at least 9 columns, the mini card 6; on a narrow card the picture gets smaller then hidden, and the status pill shows only its coloured dot
+- Sections view: the full card needs at least 9 columns, the mini card 6, and its height follows its content (compact or expanded); on a narrow card the picture gets smaller then hidden, and the status pill shows only its coloured dot
 - Single file, no external dependency: the drawings and brand logos are embedded; only English is in it, the other languages are loaded when needed
 
 ## Supported integrations

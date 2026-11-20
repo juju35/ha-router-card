@@ -4496,14 +4496,17 @@ class RouterMiniCard extends RouterCard {
     return this._zoomed ? super.getCardSize() : 3;
   }
 
+  // Height follows the content (compact or zoomed), as the sibling mini cards.
   getGridOptions() {
-    return this._zoomed ? super.getGridOptions() : { columns: 6, min_columns: 6 };
+    return { ...(this._zoomed ? super.getGridOptions() : { columns: 6, min_columns: 6 }), rows: "auto" };
   }
 
   _zoom(on) {
     if (this._zoomed === on) return;
     this._zoomed = on;
     this._update();
+    // Lets a masonry / sections view re-measure the card after the switch.
+    this.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
   }
 
   _headerEnd() {
