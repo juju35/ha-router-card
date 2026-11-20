@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.4.0 - 2026-11-20
+## 1.5.0 - 2026-11-20
 
 ### Features
+- **System gauges as tiles**: the CPU, RAM, disk and temperature gauges each sit in a neutral tile (the calm look of the rate tiles), the 24 h curve in an 18 px band at the tile's foot; every gauge tile has the same height, temperatures included, so the curves no longer look like a detached strip under the row.
 - The Router Mini Card's visual editor also offers **Speed test**, **Network devices** and **LAN** (`show_speedtest`, `show_nodes`, `show_lan`): its detail view is the full card, which shows them (README: "both").
 
 ### Performance
