@@ -4171,16 +4171,18 @@ const FULL_STYLE = `
   .facts > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
   .facts .icon { width: 14px; height: 14px; color: var(--secondary-text-color); }
   .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
-  .gauge { display: flex; flex-direction: column; align-items: center; position: relative; padding: 4px 0 2px; border-radius: 10px; overflow: hidden; }
+  /* Each gauge is a neutral tile (the "B calm" look of the rate tiles); every tile has the same height, with or without
+     a curve, so a row of CPU / RAM / temperatures lines up. */
+  .gauge { display: flex; flex-direction: column; align-items: center; position: relative; padding: 6px 0 22px; border-radius: 10px; overflow: hidden;
+           background: var(--secondary-background-color, rgba(127,127,127,.08)); }
   .gauge > :not(.spark) { position: relative; }
-  /* The 24 h curve of a percentage, on a 0-100 scale, in its own 24 px band under the ring and the label. */
-  .gauge:has(> .spark) { padding-bottom: 28px; }
-  .gauge .spark { position: absolute; inset: auto 0 0; width: 100%; height: 24px; pointer-events: none; }
+  /* The 24 h curve of a percentage, on a 0-100 scale, in an 18 px band at the tile's foot, under the ring and the label. */
+  .gauge .spark { position: absolute; inset: auto 0 0; width: 100%; height: 18px; pointer-events: none; }
   .ring { width: 52px; height: 52px; transform: rotate(-90deg); }
   .ring circle { fill: none; stroke-width: 6; }
   .ring .track { stroke: var(--divider-color, rgba(127,127,127,.25)); }
   .ring .value { stroke: var(--c, var(--rc-accent)); stroke-linecap: round; transition: stroke-dasharray .6s ease; }
-  .gauge .val { position: absolute; top: 4px; height: 52px; display: flex; align-items: center; justify-content: center; }
+  .gauge .val { position: absolute; top: 6px; height: 52px; display: flex; align-items: center; justify-content: center; }
   .gauge .val b { font-size: 14px; font-weight: 500; }
   .gauge .lbl { font-size: 12px; color: var(--secondary-text-color); margin-top: 0; text-align: center; white-space: nowrap;
                 overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -4309,7 +4311,7 @@ class RouterCard extends RouterBase {
     </div>`;
   }
 
-  // A ring gauge with its 24 h curve (percentages only) behind it.
+  // A ring gauge in a neutral tile, with its 24 h curve (percentages only) at the tile's foot.
   _gauge(ref, pct, text, label, cls, hist, title) {
     const id = refId(ref);
     return `<div class="gauge clickable ${cls}" role="button" tabindex="0" data-key="${esc(ref)}" data-entity="${esc(id)}" title="${esc(title || label)}">
