@@ -4170,7 +4170,7 @@ const FULL_STYLE = `
   .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; margin-top: 6px; }
   .facts > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
   .facts .icon { width: 14px; height: 14px; color: var(--secondary-text-color); }
-  .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+  .gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
   /* Each gauge is a neutral tile (the "B calm" look of the rate tiles); every tile has the same height, with or without
      a curve, so a row of CPU / RAM / temperatures lines up. */
   .gauge { display: flex; flex-direction: column; align-items: center; position: relative; padding: 6px 0 22px; border-radius: 10px; overflow: hidden;

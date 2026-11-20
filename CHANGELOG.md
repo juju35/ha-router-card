@@ -11,6 +11,7 @@
 - The visual editor hands its data to the form only when the configuration changes, and builds its schema (devices, detected kind) only when the registries, the device or the language change, no longer on every state change.
 
 ### Fixes
+- System section: the gauges keep four to a row down to a 300 px card (64 px minimum width instead of 76 px), no longer 3 + 1.
 - Entity ids are escaped in the card's attributes like every other value (ids from the `entities` option included).
 - Leaving the page also cancels a pending header measurement.
 

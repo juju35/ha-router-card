@@ -75,6 +75,7 @@ const overlaps = async (cards) => {
         }
         const gauges = [...el.shadowRoot.querySelectorAll(".gauge")].map((g) => ({
           h: Math.round(g.getBoundingClientRect().height),
+          top: Math.round(g.getBoundingClientRect().top),
           bg: getComputedStyle(g).backgroundColor,
           spark: !!g.querySelector(":scope > .spark"),
         }));
@@ -112,5 +113,7 @@ test("system gauges are neutral tiles of one height, with or without a 24 h curv
     assert.ok(m.gauges.some((g) => g.spark) && m.gauges.some((g) => !g.spark), `${m.at}: gauges with and without a curve expected`);
     assert.equal(new Set(m.gauges.map((g) => g.h)).size, 1, `${m.at}: gauge heights differ ${JSON.stringify(m.gauges)}`);
     for (const g of m.gauges) assert.notEqual(g.bg, "rgba(0, 0, 0, 0)", `${m.at}: gauge without a tile background`);
+    // Four gauges (CPU, RAM, two temperatures) stay on one row down to 300 px.
+    if (m.gauges.length <= 4) assert.equal(new Set(m.gauges.map((g) => g.top)).size, 1, `${m.at}: gauges wrap ${JSON.stringify(m.gauges)}`);
   }
 });
