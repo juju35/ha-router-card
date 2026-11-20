@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.4.0 - 2026-11-20
+
+### Features
+- The Router Mini Card's visual editor also offers **Speed test**, **Network devices** and **LAN** (`show_speedtest`, `show_nodes`, `show_lan`): its detail view is the full card, which shows them (README: "both").
+
+### Performance
+- The Speedtest.net / Fast.com sensors are looked up once per registry and set of states, no longer through every entity of Home Assistant on each state change.
+- The visual editor hands its data to the form only when the configuration changes, and builds its schema (devices, detected kind) only when the registries, the device or the language change, no longer on every state change.
+
+### Fixes
+- Entity ids are escaped in the card's attributes like every other value (ids from the `entities` option included).
+- Leaving the page also cancels a pending header measurement.
+
+### Maintenance
+- The unit tests report the card's own coverage; new tests for the Speedtest.net and Fast.com fallback and for the editor.
+
 ## 1.3.0 - 2026-11-18
 
 ### Features
