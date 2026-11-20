@@ -4701,7 +4701,8 @@ class RouterCardEditor extends RouterEditorBase {
 
 class RouterMiniCardEditor extends RouterEditorBase {
   static get toggles() {
-    return ["show_network", "show_history", "show_system", "zoom"];
+    // The mini card's detail view is the full card: its options too, as on the other cards.
+    return ["show_network", "show_history", "show_speedtest", "show_system", "show_nodes", "show_lan", "zoom"];
   }
 }
 

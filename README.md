@@ -211,10 +211,10 @@ rate_unit: bits
 | `illustration_theme` | both | `auto` | `auto` (follows the Home Assistant theme: night with a dark theme, day with a light theme), `day` or `night` |
 | `show_network` | both | `true` | Download / upload rates (and WAN IP, uptime, latency, speed test on the full card) |
 | `show_history` | both | `true` | 24 h curves behind the rate tiles and the CPU / RAM / disk gauges, from the recorder's 5-minute statistics (sensors with a `state_class`): the curve breaks where the recorder has no data |
-| `show_speedtest` | full | `true` | The last speed test in the network section (download, upload and ping; its time on hover) |
+| `show_speedtest` | both | `true` | The last speed test in the network section (download, upload and ping; its time on hover) |
 | `show_system` | both | `true` | CPU, RAM, disk and temperature gauges, fans and load average (CPU and hottest temperature on the mini card) |
-| `show_nodes` | full | `true` | Mesh units, access points and switches of the router's integration |
-| `show_lan` | full | `true` | Connected clients and Wi-Fi networks |
+| `show_nodes` | both | `true` | Mesh units, access points and switches of the router's integration |
+| `show_lan` | both | `true` | Connected clients and Wi-Fi networks |
 | `entities` | both | — | Sensors of your choice (see below) |
 | `cpu_warning`, `cpu_critical` | both | `80`, `95` | CPU usage (%) from which the gauge turns orange, red |
 | `ram_warning`, `ram_critical` | both | `80`, `90` | RAM usage (%) from which the gauge turns orange, red |

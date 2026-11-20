@@ -59,6 +59,11 @@ test("client counts agree with their number", () => {
   assert.equal(tn({ language: "ru" }, {}, "clients_n", 11), "клиентов");
 });
 
+test("the mini card's editor offers the full card's options its detail view uses", () => {
+  for (const name of RouterCardEditor.toggles) assert.ok(RouterMiniCardEditor.toggles.includes(name), name);
+  assert.ok(RouterMiniCardEditor.toggles.includes("zoom"));
+});
+
 test("every editor field has a label in every language", () => {
   const fields = [
     "device", "title", "kind", "admin_url", "rate_unit", "language", "entities", "speedtest",
