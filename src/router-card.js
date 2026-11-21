@@ -2793,6 +2793,10 @@ const onlineOf = (s) => {
   return ONLINE.test(v) ? true : OFFLINE.test(v) ? false : null;
 };
 
+// The unit of a count of clients: none, or the counted thing (OpenWrt ubus "clients", others "devices"…).
+const COUNT_UNIT = /^(clients?|devices?|hosts?|stations?|users?)?$/i;
+const isCountUnit = (s) => COUNT_UNIT.test(String(s?.attributes?.unit_of_measurement || "").trim());
+
 const level = (v, warn, crit) => (v === null ? "" : v >= crit ? "crit" : v >= warn ? "warn" : "ok");
 
 // Default warning / critical thresholds: CPU, RAM and disk in % used, temperatures in °C. Each can be set in the card
@@ -3036,7 +3040,7 @@ const classify = (hass, profile, e, own) => {
       return IPV4.test(String(s?.state || "")) || noValue(s) ? { slot: "ip", score: 3 + (has(w, "public", "external") ? 1 : 0) } : null;
     }
     if (has(w, "status", "state") && has(w, "wan", "mwan", "internet", "gateway")) return { slot: "wan", score: 3 + bonus };
-    if ((has(w, "clients", "devices", "hosts") || has(w, "client", "count")) && !unit.trim()) {
+    if ((has(w, "clients", "devices", "hosts") || has(w, "client", "count")) && isCountUnit(s)) {
       // A count of mesh units (Cudy "Mesh devices connected") is not one of clients.
       if (has(w, "offline", "blocked", "reservations", "reserved", "dhcp", "captive", "vpn", "openvpn", "pptpvpn", "iot", "mesh")) return null;
       if (has(w, "guest")) return { slot: "guest", score: 2 };
@@ -3190,8 +3194,9 @@ const nodeOf = (hass, profile, dev, entries) => {
     const keys = profile.keys?.node_state;
     if ((k && (profile.nodeOnline?.includes(k) || keys === k)) || (id.startsWith("binary_sensor.") && s.attributes?.device_class === "connectivity" && !has(w, "wan", "internet"))) {
       online ??= id;
-    } else if (id.startsWith("sensor.") && (k === profile.keys?.clients || has(w, "clients", "devices") || has(w, "client", "count")) && !has(w, "offline", "guest", "blocked", "wired", "wireless")) {
-      if (!String(s.attributes?.unit_of_measurement || "").trim()) clients ??= id;
+    } else if (id.startsWith("sensor.") && ((k && k === profile.keys?.clients) || has(w, "clients", "devices") || has(w, "client", "count")) && !has(w, "offline", "guest", "blocked", "wired", "wireless")) {
+      // A count: no unit or a count unit (OpenWrt ubus "clients"), and a number when it has a value (not a BSSID).
+      if (isCountUnit(s) && (noValue(s) || Number.isFinite(Number(s.state)))) clients ??= id;
     } else if (id.startsWith("sensor.") && has(w, "state", "status") && onlineOf(s) !== null) online ??= id;
   }
   if (!online && !clients) return null;
@@ -3378,6 +3383,7 @@ const BASE_STYLE = `
   [role="button"]:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 2px; }
   .ok { --c: var(--rc-ok); } .warn { --c: var(--rc-warn); } .crit { --c: var(--rc-crit); } .off { --c: var(--disabled-text-color, #9e9e9e); }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c, var(--rc-ok)); flex: none; display: inline-block; }
+  .dot.blank { visibility: hidden; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
           background: color-mix(in srgb, var(--c, var(--rc-ok)) 15%, transparent);
           color: color-mix(in srgb, var(--c, var(--rc-ok)) 50%, var(--primary-text-color)); }
@@ -3897,10 +3903,12 @@ class RouterBase extends HTMLElement {
     return { n: known.length ? known.filter((id) => this._s(id).state === "home").length : null, total: known.length || null, entity: null };
   }
 
-  // Network devices online, as { online, total }, or null without any.
+  // Network devices online, as { online, total }, or null without any. A device with no state entity (OpenWrt ubus
+  // access points) tells nothing: it is left out of the count rather than counted offline.
   _nodesUp(box) {
-    if (!box.nodes.length) return null;
-    return { online: box.nodes.filter((n) => onlineOf(this._s(n.online)) === true).length, total: box.nodes.length };
+    const known = box.nodes.filter((n) => n.online);
+    if (!known.length) return null;
+    return { online: known.filter((n) => onlineOf(this._s(n.online)) === true).length, total: known.length };
   }
 
   // Download / upload rate tile, shared by the full and the mini card.
@@ -4386,7 +4394,7 @@ class RouterCard extends RouterBase {
       const clients = num(this._s(n.clients));
       const state = n.online ? `<span class="chip ${cls}">${esc(this._t(on === true ? "online" : on === false ? "offline" : noValue(s) ? "unavailable" : "unknown"))}</span>` : "";
       return `<div class="node clickable" role="button" tabindex="0" data-key="${esc(n.id)}" data-entity="${esc(refId(n.entity))}">
-        <span class="dot ${cls || "off"}"></span><span class="grow">${esc(n.name || n.model)}${n.main ? ` <span class="muted">· ${esc(this._t("main"))}</span>` : ""}</span>
+        <span class="dot ${cls || "blank"}"></span><span class="grow">${esc(n.name || n.model)}${n.main ? ` <span class="muted">· ${esc(this._t("main"))}</span>` : ""}</span>
         ${n.model && n.model !== n.name ? `<span class="muted">${esc(n.model)}</span>` : ""}
         ${clients !== null ? `<span class="n" title="${esc(`${clients} ${this._tn("clients_n", clients)}`)}">${svgIcon(ICONS.devices)}${clients}</span>` : ""}
         ${state}
