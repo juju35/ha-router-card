@@ -237,6 +237,37 @@ test("OpenWrt (FaserF): WAN interface rates, mwan state, public IP, storage, fir
   assert.equal(sc.update, "update.openwrt_firmware");
 });
 
+test("OpenWrt ubus (#24): access points count their `connected_clients` (unit \"clients\"), never a BSSID or SSID", () => {
+  const keys = ["ssid", "bssid", "channel", "mode", "hardware_mode", "ht_mode", "country", "connected_clients"];
+  const devices = { r: { name: "OpenWrt", model: "GL-MT6000" }, hub: { name: "Access Points", via: "r" } };
+  const rows = [["sensor.openwrt_cpu_usage", "r", null, "3", pct], ["sensor.access_points_total_wireless_clients", "hub", null, "27", { unit_of_measurement: "clients" }]];
+  const aps = { a: ["Home 2G", "96:83:C4:DA:C7:2F", "0"], b: ["Home 5G", "94:83:C4:DA:C7:30", "4"], c: ["Office", "94:83:C4:DA:C7:31", "unavailable"] };
+  for (const [d, [name, bssid, n]] of Object.entries(aps)) {
+    devices[d] = { name, model: "Access Point", via: "hub" };
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const value = { ssid: name, bssid, channel: "36", mode: "Master", hardware_mode: "802.11ax", ht_mode: "HE80", country: "FR", connected_clients: n };
+    for (const k of keys) rows.push([`sensor.${slug}_${k}`, d, null, value[k], k === "connected_clients" ? { unit_of_measurement: "clients", state_class: "measurement" } : {}]);
+  }
+  const nodes = plain(discover(mock("openwrt_ubus", devices, rows), undefined, {}).nodes);
+  assert.deepEqual(
+    nodes.map((n) => [n.name, n.clients, n.online]),
+    [
+      ["Home 2G", "sensor.home_2g_connected_clients", null],
+      ["Home 5G", "sensor.home_5g_connected_clients", null],
+      ["Office", "sensor.office_connected_clients", null],
+    ]
+  );
+});
+
+test("a node's clients sensor: a count unit and a numeric state; a sensor without translation key is not the profile's key", () => {
+  const hass = mock("openwrt_ubus", { r: { name: "Router" }, ap: { name: "AP", via: "r" } }, [
+    ["sensor.router_cpu_usage", "r", null, "3", pct],
+    ["sensor.ap_bitrate", "ap", null, "144", {}],
+    ["sensor.ap_client_count", "ap", null, "a:b", {}],
+  ]);
+  assert.deepEqual(plain(discover(hass, undefined, {}).nodes), []);
+});
+
 test("an integration the card does not know: shown from the kind and words of its entities", () => {
   const hass = mock(
     "some_router",

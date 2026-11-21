@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 - 2026-11-21
+
+### Fixes
+- **Network devices** (#24): an access point of OpenWrt ubus showed the first byte of its BSSID as its client count. A device's sensor without translation key matched the clients key of an integration that has none, so the first sensor without unit was taken; the clients sensor must now name clients and hold a number. A count unit (`clients`, `devices`, `hosts`…) is accepted, so OpenWrt ubus's `connected_clients` (unit `clients`) is the one counted, on the router as on its access points.
+- A network device with no state entity (OpenWrt ubus access points) no longer shows a grey dot as if its state were unknown, and is left out of the "online / total" count in the mini card's footer instead of counting as offline.
+
 ## 1.5.0 - 2026-11-20
 
 ### Features
