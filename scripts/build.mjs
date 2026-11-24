@@ -1,17 +1,18 @@
-// Bundles src/router-card.js into the single Marketplace file dist/router-card.js, inlining the brand logos
+// Bundles the ES modules of src/ (entry src/index.js, assembled by scripts/bundle.mjs) into the single Marketplace file dist/router-card.js, inlining the brand logos
 // ("__IMG_FILE:<file>__", SVG or PNG) from images/<file> when that file is there, else leaving them out (empty: the header then
 // shows the device icon without a logo badge), so the card needs no extra resource.
 // Usage: node scripts/build.mjs  (dist/ is not committed: CI and the release workflow build it)
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { splitDist } from "./i18n-split.mjs";
+import { bundle } from "./bundle.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pkg = JSON.parse(readFileSync(`${root}package.json`, "utf8"));
 const b64 = (file) => readFileSync(`${root}images/${file}`).toString("base64");
 const mime = (file) => (file.endsWith(".png") ? "image/png" : "image/svg+xml");
 
-const out = readFileSync(`${root}src/router-card.js`, "utf8")
+const out = bundle("src/index.js")
   .replace("__VERSION__", pkg.version)
   .replace(/__IMG_FILE:([\w.-]+)__/g, (_, file) => (existsSync(`${root}images/${file}`) ? `data:${mime(file)};base64,${b64(file)}` : ""));
 
